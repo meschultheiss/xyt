@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "xyt"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Marc-Edouard Schultheiss <meschultheiss@gmail.com>"]
 maintainers = ["Marc-Edouard Schultheiss <meschultheiss@gmail.com>"]
 description = "xyt is a python package for processing raw gps data into mobility data. xyt offers privacy-based capabilities and aims to provide a plug-and-play pipeline to leverage gps data."
