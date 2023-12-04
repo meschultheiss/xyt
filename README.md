@@ -10,11 +10,11 @@ pip install xyt
 
 ## Documentation
 
-(Full documentation here)[https://meschultheiss.github.io/xyt/py-modindex.html]
+[Full documentation here](https://meschultheiss.github.io/xyt/py-modindex.html)
 
 ## Scientific methods
 
-(More documentation here)[https://situee.ch/articles/xyt/scientific-report]
+[More documentation here](https://situee.ch/articles/xyt/scientific-report)
 
 ## Input gps format
 
