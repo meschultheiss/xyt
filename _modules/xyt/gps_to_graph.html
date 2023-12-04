@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xyt.gps_to_graph &mdash; xyt 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            xyt
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">xyt</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">xyt.gps_to_graph</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for xyt.gps_to_graph</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">gif</span>
+<span class="kn">import</span> <span class="nn">geopandas</span> <span class="k">as</span> <span class="nn">gpd</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">pathos.multiprocessing</span> <span class="kn">import</span> <span class="n">ProcessingPool</span> <span class="k">as</span> <span class="n">Pool</span>
+
+
+<div class="viewcode-block" id="GPStoGraph">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_graph.GPStoGraph">[docs]</a>
+<span class="k">class</span> <span class="nc">GPStoGraph</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">&quot;display.max_columns&quot;</span><span class="p">,</span> <span class="mi">999</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GPStoGraph.verify_columns">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_graph.GPStoGraph.verify_columns">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">verify_columns</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">expected_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks for missing columns in a DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pd.DataFrame): DataFrame to check columns.</span>
+<span class="sd">            - expected_columns (list[str]): List of expected column names.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            - ValueError: If columns in `expected_columns` are missing in the DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">missing_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">expected_columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing_columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Columns missing in DataFrame: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_preprocess_nodes</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Preprocesses GPS data by removing consecutive duplicate location entries.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - nodes (pd.DataFrame): DataFrame containing GPS data.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pd.DataFrame: Preprocessed GPS data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create a copy of the original DataFrame</span>
+        <span class="n">nodes_</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Shift the location_id to create a &#39;location_id_next&#39; column</span>
+        <span class="n">nodes_</span><span class="p">[</span><span class="s2">&quot;location_id_next&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">)[</span><span class="s2">&quot;location_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span>
+            <span class="o">-</span><span class="mi">1</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Identify consecutive duplicate locations and remove them</span>
+        <span class="n">index_to_drop</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i_0</span> <span class="ow">in</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="n">nodes_</span><span class="o">.</span><span class="n">location_id</span> <span class="o">==</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">)[</span><span class="s2">&quot;location_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i_0</span> <span class="o">&lt;=</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">index_to_drop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i_0</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">i</span> <span class="o">=</span> <span class="n">i_0</span>
+                <span class="n">location_id</span> <span class="o">=</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;location_id&quot;</span><span class="p">]</span>
+
+                <span class="k">while</span> <span class="n">location_id</span> <span class="o">==</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;location_id_next&quot;</span><span class="p">]:</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">index_to_drop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+                <span class="c1"># Update &#39;finished_at&#39; and &#39;location_id_next&#39; for the first occurrence</span>
+                <span class="n">nodes_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i_0</span><span class="p">,</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">]</span>
+                <span class="n">nodes_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i_0</span><span class="p">,</span> <span class="s2">&quot;location_id_next&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;location_id_next&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Drop the identified duplicate locations and reset index</span>
+        <span class="n">nodes_</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">index_to_drop</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">nodes_</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Create an &#39;edges&#39; column with tuples of location_id and location_id_next</span>
+        <span class="n">nodes_</span><span class="p">[</span><span class="s2">&quot;edges&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">nodes_</span><span class="o">.</span><span class="n">location_id</span><span class="p">,</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">location_id_next</span><span class="p">))</span>
+
+        <span class="c1"># Create a GeoDataFrame and parse geometry to a tuple of coordinates in the right projection</span>
+        <span class="n">nodes_</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+            <span class="n">nodes_</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">gpd</span><span class="o">.</span><span class="n">points_from_xy</span><span class="p">(</span><span class="n">nodes_</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">lat</span><span class="p">),</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span>
+        <span class="p">)</span>
+        <span class="n">nodes_</span><span class="p">[</span><span class="s2">&quot;coordinates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">nodes_</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">nodes_</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_get_motifs</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes motifs based on GPS data and constructs corresponding graphs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - nodes (pd.DataFrame): DataFrame containing GPS data.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pd.DataFrame: DataFrame with computed motifs and corresponding graphs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">mtfs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">nodes</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+        <span class="n">mtfs</span><span class="p">[</span><span class="s2">&quot;graph&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">mtfs</span><span class="p">[</span><span class="s2">&quot;graph_flat&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="n">mtfs</span><span class="p">[</span><span class="s2">&quot;graph&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mtfs</span><span class="p">[</span><span class="s2">&quot;graph&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;object&quot;</span><span class="p">)</span>
+        <span class="n">mtfs</span><span class="p">[</span><span class="s2">&quot;graph_flat&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mtfs</span><span class="p">[</span><span class="s2">&quot;graph_flat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;object&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">user_id_</span> <span class="ow">in</span> <span class="n">mtfs</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">nodes_</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nodes</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id_</span><span class="p">]</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">attributes</span> <span class="o">=</span> <span class="n">nodes_</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span>
+                    <span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span> <span class="s2">&quot;location_id&quot;</span><span class="p">,</span> <span class="s2">&quot;started_at&quot;</span><span class="p">,</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">]</span>
+                <span class="p">)[</span>
+                    <span class="p">[</span>
+                        <span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;location_id&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;coordinates&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;started_at&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;finished_at&quot;</span><span class="p">,</span>
+                    <span class="p">]</span>
+                <span class="p">]</span>
+                <span class="n">attributes</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;location_id&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">attributes_time</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;location_id&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span>
+                    <span class="p">{</span><span class="s2">&quot;started_at&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">}</span>
+                <span class="p">)</span>
+                <span class="n">attributes_time</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">attributes_time</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                        <span class="k">lambda</span> <span class="n">attributes_time</span><span class="p">:</span> <span class="n">attributes_time</span><span class="o">.</span><span class="n">xs</span><span class="p">(</span>
+                            <span class="n">attributes_time</span><span class="o">.</span><span class="n">name</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+                    <span class="p">)</span>
+                    <span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+                <span class="p">)</span>
+
+                <span class="n">attributes_location</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                    <span class="n">attributes</span><span class="p">[</span><span class="s2">&quot;coordinates&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+                <span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+                <span class="n">G</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">nodes_</span><span class="o">.</span><span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">())</span>
+
+                <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">attributes_time</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
+                <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">attributes_location</span><span class="p">)</span>
+
+                <span class="n">mtfs</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">user_id_</span><span class="p">,</span> <span class="s2">&quot;graph&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">G</span>
+                <span class="n">mtfs</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">user_id_</span><span class="p">,</span> <span class="s2">&quot;graph_flat&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">nx</span><span class="o">.</span><span class="n">to_numpy_array</span><span class="p">(</span><span class="n">G</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="p">)</span>
+
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exception raised for &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">user_id_</span><span class="p">))</span>
+                <span class="k">continue</span>
+
+        <span class="k">return</span> <span class="n">mtfs</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GPStoGraph.get_graphs">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_graph.GPStoGraph.get_graphs">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_graphs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extracts motifs and graphs from GPS data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pd.DataFrame): DataFrame containing GPS data.</span>
+<span class="sd">            - verbose (bool): Verbosity for multiprocessing (default is True).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pd.DataFrame: DataFrame with extracted motifs and graphs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">col_to_use</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;location_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;started_at&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;finished_at&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;lon&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;lat&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;home_location_id&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verify_columns</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">col_to_use</span><span class="p">)</span>
+
+        <span class="n">nodes</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col_to_use</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span> <span class="s2">&quot;started_at&quot;</span><span class="p">])</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span>
+            <span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span> <span class="s2">&quot;location_id&quot;</span><span class="p">,</span> <span class="s2">&quot;started_at&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">nodes</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">mtfs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">nodes</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+        <span class="n">mtfs</span><span class="p">[</span><span class="s2">&quot;mtf_loc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">mtfs</span><span class="p">[</span><span class="s2">&quot;mtf_loc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mtfs</span><span class="p">[</span><span class="s2">&quot;mtf_loc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;object&quot;</span><span class="p">)</span>
+
+        <span class="n">nodes_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_nodes</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+
+        <span class="n">cores</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Multiprocessing is launched with </span><span class="si">%s</span><span class="s2"> cores in parallel&quot;</span> <span class="o">%</span> <span class="n">cores</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;...&quot;</span><span class="p">)</span>
+
+        <span class="c1"># split the df in as many array as the machine has cores</span>
+        <span class="n">user_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array_split</span><span class="p">(</span><span class="n">nodes_</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">cores</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">nodes_split</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">user_ids</span><span class="p">:</span>
+            <span class="n">nodes_split</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nodes_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">nodes_</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">tolist</span><span class="p">())])</span>
+
+        <span class="c1"># create the multiprocessing pool</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+
+        <span class="c1"># process the DataFrame by mapping function to each df across the pool</span>
+        <span class="n">df_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_motifs</span><span class="p">,</span> <span class="n">nodes_split</span><span class="p">))</span>
+
+        <span class="c1"># return the df</span>
+        <span class="n">mtf</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">df_out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span> <span class="s2">&quot;DiGraph_motif&quot;</span><span class="p">,</span> <span class="s2">&quot;motif_flat&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="c1"># close down the pool and join</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+        <span class="n">mtf</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">mtf</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mtf</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">str</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Job done !&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">mtf</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="nd">@gif</span><span class="o">.</span><span class="n">frame</span>
+    <span class="k">def</span> <span class="nf">_plot_graph</span><span class="p">(</span><span class="n">mtf</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">user_id_</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a plot of the graph motif for a specific user.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - mtf (pd.DataFrame): DataFrame containing motif data.</span>
+<span class="sd">            - user_id_ (str): User identifier.</span>
+<span class="sd">            - i (int): Index of the user&#39;s data.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - plt.figure: Figure with the plot of the graph motif.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">G_all</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">compose_all</span><span class="p">(</span>
+            <span class="n">mtf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mtf</span><span class="o">.</span><span class="n">user_id</span> <span class="o">==</span> <span class="n">user_id_</span><span class="p">,</span> <span class="s2">&quot;DiGraph_motif&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="n">user_id_day_</span> <span class="o">=</span> <span class="n">mtf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mtf</span><span class="o">.</span><span class="n">user_id</span> <span class="o">==</span> <span class="n">user_id_</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="n">G1</span> <span class="o">=</span> <span class="n">mtf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">user_id_day_</span><span class="p">,</span> <span class="s2">&quot;DiGraph_motif&quot;</span><span class="p">]</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span>
+            <span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">100</span>
+        <span class="p">)</span>  <span class="c1"># figsize=(10,10),dpi=50,</span>
+
+        <span class="c1"># plot the backgroud graph</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">get_node_attributes</span><span class="p">(</span><span class="n">G_all</span><span class="p">,</span> <span class="s2">&quot;coordinates&quot;</span><span class="p">)</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">draw_networkx_edges</span><span class="p">(</span>
+            <span class="n">G_all</span><span class="p">,</span>
+            <span class="n">pos</span><span class="p">,</span>
+            <span class="n">edge_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.20</span><span class="p">,</span>
+            <span class="n">arrowstyle</span><span class="o">=</span><span class="s2">&quot;-&gt;&quot;</span><span class="p">,</span>
+            <span class="n">arrowsize</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+            <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">connectionstyle</span><span class="o">=</span><span class="s2">&quot;arc3,rad=+0.15&quot;</span><span class="p">,</span>
+        <span class="p">)</span>  <span class="c1"># wedge,shrink_factor=0.5</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">draw_networkx_nodes</span><span class="p">(</span>
+            <span class="n">G_all</span><span class="p">,</span>
+            <span class="n">pos</span><span class="p">,</span>
+            <span class="n">node_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.20</span><span class="p">,</span>
+            <span class="n">node_size</span><span class="o">=</span><span class="mi">70</span><span class="p">,</span>
+            <span class="n">nodelist</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">G_all</span><span class="o">.</span><span class="n">nodes</span><span class="p">())[</span><span class="mi">1</span><span class="p">:],</span>
+        <span class="p">)</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">draw_networkx_nodes</span><span class="p">(</span>
+            <span class="n">G_all</span><span class="p">,</span>
+            <span class="n">pos</span><span class="p">,</span>
+            <span class="n">node_color</span><span class="o">=</span><span class="s2">&quot;#dbcc9c&quot;</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.90</span><span class="p">,</span>
+            <span class="n">node_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+            <span class="n">nodelist</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">G_all</span><span class="o">.</span><span class="n">nodes</span><span class="p">())[:</span><span class="mi">1</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="c1"># plot the new daily graph</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">get_node_attributes</span><span class="p">(</span><span class="n">G1</span><span class="p">,</span> <span class="s2">&quot;coordinates&quot;</span><span class="p">)</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">draw_networkx_edges</span><span class="p">(</span>
+            <span class="n">G1</span><span class="p">,</span>
+            <span class="n">pos</span><span class="p">,</span>
+            <span class="n">edge_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.90</span><span class="p">,</span>
+            <span class="n">arrowstyle</span><span class="o">=</span><span class="s2">&quot;-&gt;&quot;</span><span class="p">,</span>
+            <span class="n">arrowsize</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+            <span class="n">width</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">connectionstyle</span><span class="o">=</span><span class="s2">&quot;arc3,rad=+0.15&quot;</span><span class="p">,</span>
+        <span class="p">)</span>  <span class="c1"># wedge,shrink_factor=0.5</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">draw_networkx_nodes</span><span class="p">(</span>
+            <span class="n">G1</span><span class="p">,</span>
+            <span class="n">pos</span><span class="p">,</span>
+            <span class="n">node_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.90</span><span class="p">,</span>
+            <span class="n">node_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+            <span class="n">nodelist</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">G1</span><span class="o">.</span><span class="n">nodes</span><span class="p">())[</span><span class="mi">1</span><span class="p">:],</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">f</span>
+
+<div class="viewcode-block" id="GPStoGraph.plot_graph">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_graph.GPStoGraph.plot_graph">[docs]</a>
+    <span class="k">def</span> <span class="nf">plot_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mtf</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates GIFs displaying the graph motif for multiple users.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - mtf (pd.DataFrame): DataFrame containing motif data.</span>
+<span class="sd">            - path (str): Path to save the GIFs (default is &#39;&#39;).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">user_id_</span> <span class="ow">in</span> <span class="n">random</span><span class="o">.</span><span class="n">choices</span><span class="p">(</span><span class="n">mtf</span><span class="o">.</span><span class="n">user_id</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">k</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">mtf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mtf</span><span class="o">.</span><span class="n">user_id</span> <span class="o">==</span> <span class="n">user_id_</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">)):</span>
+                <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_plot_graph</span><span class="p">(</span><span class="n">mtf</span><span class="p">,</span> <span class="n">user_id_</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.gif&quot;</span> <span class="o">%</span> <span class="n">user_id_</span>
+            <span class="n">save_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+            <span class="n">gif</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">save_path</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GPStoGraph.plot_motif">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_graph.GPStoGraph.plot_motif">[docs]</a>
+    <span class="k">def</span> <span class="nf">plot_motif</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mtf</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots motifs and their frequency distribution.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - mtf (pd.DataFrame): DataFrame containing motif data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">mtf_</span> <span class="o">=</span> <span class="n">mtf</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">motif_to_keep</span> <span class="o">=</span> <span class="mi">9</span>
+        <span class="n">mtf_</span><span class="p">[</span><span class="s2">&quot;motif_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">99</span>
+
+        <span class="k">for</span> <span class="n">i_</span><span class="p">,</span> <span class="n">mtf</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mtf_</span><span class="o">.</span><span class="n">motif_flat</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">[:</span><span class="n">motif_to_keep</span><span class="p">]):</span>
+            <span class="n">mtf_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mtf_</span><span class="o">.</span><span class="n">motif_flat</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">==</span> <span class="n">mtf</span><span class="p">),</span> <span class="s2">&quot;motif_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i_</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">mtf_list</span> <span class="o">=</span> <span class="n">mtf_</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;motif_id&quot;</span><span class="p">)[</span><span class="s2">&quot;motif_flat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+            <span class="n">motif_flat</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="o">.</span><span class="n">count</span>
+        <span class="p">)</span>
+        <span class="n">mtf_list</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mtf_list</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">mtf_list</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span>
+            <span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">)</span>  <span class="c1"># figsize=(10,10),dpi=50,</span>
+
+        <span class="k">for</span> <span class="n">sublot</span><span class="p">,</span> <span class="n">id_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mtf_list</span><span class="o">.</span><span class="n">index</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span>
+                <span class="mi">1</span><span class="p">,</span>
+                <span class="mi">9</span><span class="p">,</span>
+                <span class="n">sublot</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">xticks</span><span class="o">=</span><span class="p">[],</span>
+                <span class="n">yticks</span><span class="o">=</span><span class="p">[],</span>
+                <span class="n">frame_on</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">title</span><span class="o">=</span><span class="s2">&quot;MOTIF </span><span class="si">%s</span><span class="se">\n</span><span class="s2">(</span><span class="si">%s%%</span><span class="s2">)&quot;</span>
+                <span class="o">%</span> <span class="p">(</span><span class="n">id_</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">mtf_list</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">id_</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+            <span class="p">)</span>  <span class="c1"># title=&#39;motif %s (%d%%)&#39;%(counter,expl_)</span>
+            <span class="n">motif</span> <span class="o">=</span> <span class="n">mtf_list</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">id_</span><span class="p">,</span> <span class="s2">&quot;motif_flat&quot;</span><span class="p">]</span>
+            <span class="n">dim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">motif</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">motif_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">motif</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">))</span>
+            <span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">(</span><span class="n">motif_arr</span><span class="p">)</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">circular_layout</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+            <span class="n">nx</span><span class="o">.</span><span class="n">draw_networkx_edges</span><span class="p">(</span>
+                <span class="n">G</span><span class="p">,</span>
+                <span class="n">pos</span><span class="p">,</span>
+                <span class="n">edge_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+                <span class="n">alpha</span><span class="o">=</span><span class="mf">0.80</span><span class="p">,</span>
+                <span class="n">arrowstyle</span><span class="o">=</span><span class="s2">&quot;-&gt;&quot;</span><span class="p">,</span>
+                <span class="n">arrowsize</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+                <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">connectionstyle</span><span class="o">=</span><span class="s2">&quot;arc3,rad=+0.15&quot;</span><span class="p">,</span>
+            <span class="p">)</span>  <span class="c1"># wedge,shrink_factor=0.5</span>
+            <span class="n">nx</span><span class="o">.</span><span class="n">draw_networkx_nodes</span><span class="p">(</span>
+                <span class="n">G</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">node_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">node_size</span><span class="o">=</span><span class="mi">70</span><span class="p">,</span> <span class="n">nodelist</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="p">))</span>
+            <span class="p">)</span>
+            <span class="n">nx</span><span class="o">.</span><span class="n">draw_networkx_nodes</span><span class="p">(</span>
+                <span class="n">G</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">node_color</span><span class="o">=</span><span class="s2">&quot;#dbcc9c&quot;</span><span class="p">,</span> <span class="n">node_size</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">nodelist</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_get_mtf_sequence</span><span class="p">(</span><span class="n">mtf_data</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">31</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieves a motif sequence for a specific user.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - mtf_data: DataFrame containing motif data.</span>
+<span class="sd">            - user_id (str): User identifier.</span>
+<span class="sd">            - pad (int): Length of the output sequence (default is 31).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - np.array: Padded motif sequence for the specified user.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Extract motif data for the specified user</span>
+        <span class="n">sequence</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">mtf_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mtf_data</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;motif_id&quot;</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">]]</span>
+            <span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Align the first observation on Monday</span>
+        <span class="n">pad_before</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pad_before</span> <span class="o">=</span> <span class="n">sequence</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">dayofweek</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># 0 is Monday, 1 is Tuesday, etc.</span>
+
+        <span class="c1"># Resample the time series to have continuous days, fill in missing values with 0</span>
+        <span class="n">sequence</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">sequence</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s2">&quot;1D&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">T</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Make all the series the same length by padding after</span>
+        <span class="n">pad_after_</span> <span class="o">=</span> <span class="n">pad</span> <span class="o">-</span> <span class="n">sequence</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">pad_before</span>
+        <span class="n">pad_after</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pad_after_</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">sequence</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">pad</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span>
+                <span class="n">sequence</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">pad_width</span><span class="o">=</span><span class="p">[</span><span class="n">pad_before</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span>
+            <span class="p">)[:</span><span class="n">pad</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span>
+                <span class="n">sequence</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+                <span class="n">pad_width</span><span class="o">=</span><span class="p">[</span><span class="n">pad_before</span><span class="p">,</span> <span class="n">pad_after</span><span class="p">],</span>
+                <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span>
+            <span class="p">)[:</span><span class="n">pad</span><span class="p">]</span>
+        <span class="c1"># Example usage:</span>
+        <span class="c1"># motif_sequence = get_mtf_sequence(treatment_data, mtf_data, phase=1, user_id=&#39;your_user_id&#39;)</span>
+
+<div class="viewcode-block" id="GPStoGraph.motif_sequence">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_graph.GPStoGraph.motif_sequence">[docs]</a>
+    <span class="k">def</span> <span class="nf">motif_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mtf</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_cols</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates motif sequences for users based on motif data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - mtf (pd.DataFrame): DataFrame containing motif data.</span>
+<span class="sd">            - n_cols (int): Number of columns for the motif sequence (default is 60).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pd.DataFrame: DataFrame with generated motif sequences for users.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">mtf_</span> <span class="o">=</span> <span class="n">mtf</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">motif_to_keep</span> <span class="o">=</span> <span class="mi">9</span>
+        <span class="n">mtf_</span><span class="p">[</span><span class="s2">&quot;motif_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">99</span>
+
+        <span class="k">for</span> <span class="n">i_</span><span class="p">,</span> <span class="n">mtf</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mtf_</span><span class="o">.</span><span class="n">motif_flat</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">[:</span><span class="n">motif_to_keep</span><span class="p">]):</span>
+            <span class="n">mtf_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mtf_</span><span class="o">.</span><span class="n">motif_flat</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">==</span> <span class="n">mtf</span><span class="p">),</span> <span class="s2">&quot;motif_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i_</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">mtf_</span> <span class="o">=</span> <span class="n">mtf_</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+        <span class="n">mtf_</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mtf_</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="p">[</span><span class="o">-</span><span class="mi">8</span><span class="p">:]</span>
+        <span class="n">mtf_</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">mtf_</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">mtf_seq</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">mtf_</span><span class="o">.</span><span class="n">user_id</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">columns</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">n_cols</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">usrs</span> <span class="ow">in</span> <span class="n">mtf_</span><span class="o">.</span><span class="n">user_id</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">mtf_seq</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">usrs</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_mtf_sequence</span><span class="p">(</span>
+                    <span class="n">mtf_</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">usrs</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="n">n_cols</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exception raised on user &quot;</span> <span class="o">+</span> <span class="n">usrs</span> <span class="o">+</span> <span class="s2">&quot; / phase 1&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+        <span class="k">return</span> <span class="n">mtf_seq</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marc-Edouard Schultheiss.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

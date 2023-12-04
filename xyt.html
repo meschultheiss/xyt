@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xyt package &mdash; xyt 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=01f34227"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            xyt
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">xyt package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-xyt.fake_data_generator">xyt.fake_data_generator module</a><ul>
+<li><a class="reference internal" href="#xyt.fake_data_generator.FakeDataGenerator"><code class="docutils literal notranslate"><span class="pre">FakeDataGenerator</span></code></a><ul>
+<li><a class="reference internal" href="#xyt.fake_data_generator.FakeDataGenerator.generate_dataframe"><code class="docutils literal notranslate"><span class="pre">FakeDataGenerator.generate_dataframe()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.fake_data_generator.FakeDataGenerator.generate_home_location"><code class="docutils literal notranslate"><span class="pre">FakeDataGenerator.generate_home_location()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.fake_data_generator.FakeDataGenerator.generate_intermediate_points"><code class="docutils literal notranslate"><span class="pre">FakeDataGenerator.generate_intermediate_points()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.fake_data_generator.FakeDataGenerator.generate_legs"><code class="docutils literal notranslate"><span class="pre">FakeDataGenerator.generate_legs()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.fake_data_generator.FakeDataGenerator.generate_random_point_in_location"><code class="docutils literal notranslate"><span class="pre">FakeDataGenerator.generate_random_point_in_location()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.fake_data_generator.FakeDataGenerator.generate_staypoints"><code class="docutils literal notranslate"><span class="pre">FakeDataGenerator.generate_staypoints()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.fake_data_generator.FakeDataGenerator.generate_waypoints"><code class="docutils literal notranslate"><span class="pre">FakeDataGenerator.generate_waypoints()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.fake_data_generator.FakeDataGenerator.get_bounding_box"><code class="docutils literal notranslate"><span class="pre">FakeDataGenerator.get_bounding_box()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-xyt.gps_analytics">xyt.gps_analytics module</a><ul>
+<li><a class="reference internal" href="#xyt.gps_analytics.GPSAnalytics"><code class="docutils literal notranslate"><span class="pre">GPSAnalytics</span></code></a><ul>
+<li><a class="reference internal" href="#xyt.gps_analytics.GPSAnalytics.get_daily_metrics"><code class="docutils literal notranslate"><span class="pre">GPSAnalytics.get_daily_metrics()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_analytics.GPSAnalytics.get_metrics"><code class="docutils literal notranslate"><span class="pre">GPSAnalytics.get_metrics()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_analytics.GPSAnalytics.spatial_clustering"><code class="docutils literal notranslate"><span class="pre">GPSAnalytics.spatial_clustering()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_analytics.GPSAnalytics.split_overnight"><code class="docutils literal notranslate"><span class="pre">GPSAnalytics.split_overnight()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_analytics.GPSAnalytics.verify_columns"><code class="docutils literal notranslate"><span class="pre">GPSAnalytics.verify_columns()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-xyt.gps_data_privacy">xyt.gps_data_privacy module</a><ul>
+<li><a class="reference internal" href="#xyt.gps_data_privacy.GPSDataPrivacy"><code class="docutils literal notranslate"><span class="pre">GPSDataPrivacy</span></code></a><ul>
+<li><a class="reference internal" href="#xyt.gps_data_privacy.GPSDataPrivacy.aggregate"><code class="docutils literal notranslate"><span class="pre">GPSDataPrivacy.aggregate()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_privacy.GPSDataPrivacy.get_obfuscation_utility"><code class="docutils literal notranslate"><span class="pre">GPSDataPrivacy.get_obfuscation_utility()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_privacy.GPSDataPrivacy.obfuscate"><code class="docutils literal notranslate"><span class="pre">GPSDataPrivacy.obfuscate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-xyt.gps_data_processor">xyt.gps_data_processor module</a><ul>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor</span></code></a><ul>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.activities_density"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.activities_density()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.assign_cell"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.assign_cell()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.correct_clusters"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.correct_clusters()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.create_route"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.create_route()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.get_legs"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.get_legs()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.guess_home_work"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.guess_home_work()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.haversine_distance"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.haversine_distance()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.mode_detection"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.mode_detection()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.prepare_for_detection"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.prepare_for_detection()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.process_gps_data"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.process_gps_data()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.segment"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.segment()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.segment_per_user"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.segment_per_user()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_data_processor.GPSDataProcessor.smooth"><code class="docutils literal notranslate"><span class="pre">GPSDataProcessor.smooth()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-xyt.gps_to_actionspace">xyt.gps_to_actionspace module</a><ul>
+<li><a class="reference internal" href="#xyt.gps_to_actionspace.GPStoActionspace"><code class="docutils literal notranslate"><span class="pre">GPStoActionspace</span></code></a><ul>
+<li><a class="reference internal" href="#xyt.gps_to_actionspace.GPStoActionspace.compute_action_space"><code class="docutils literal notranslate"><span class="pre">GPStoActionspace.compute_action_space()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_to_actionspace.GPStoActionspace.covariance_matrix"><code class="docutils literal notranslate"><span class="pre">GPStoActionspace.covariance_matrix()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_to_actionspace.GPStoActionspace.modified_std_distance"><code class="docutils literal notranslate"><span class="pre">GPStoActionspace.modified_std_distance()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_to_actionspace.GPStoActionspace.plot_action_space"><code class="docutils literal notranslate"><span class="pre">GPStoActionspace.plot_action_space()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_to_actionspace.GPStoActionspace.plot_ellipses"><code class="docutils literal notranslate"><span class="pre">GPStoActionspace.plot_ellipses()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_to_actionspace.GPStoActionspace.verify_columns"><code class="docutils literal notranslate"><span class="pre">GPStoActionspace.verify_columns()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-xyt.gps_to_graph">xyt.gps_to_graph module</a><ul>
+<li><a class="reference internal" href="#xyt.gps_to_graph.GPStoGraph"><code class="docutils literal notranslate"><span class="pre">GPStoGraph</span></code></a><ul>
+<li><a class="reference internal" href="#xyt.gps_to_graph.GPStoGraph.get_graphs"><code class="docutils literal notranslate"><span class="pre">GPStoGraph.get_graphs()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_to_graph.GPStoGraph.motif_sequence"><code class="docutils literal notranslate"><span class="pre">GPStoGraph.motif_sequence()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_to_graph.GPStoGraph.plot_graph"><code class="docutils literal notranslate"><span class="pre">GPStoGraph.plot_graph()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_to_graph.GPStoGraph.plot_motif"><code class="docutils literal notranslate"><span class="pre">GPStoGraph.plot_motif()</span></code></a></li>
+<li><a class="reference internal" href="#xyt.gps_to_graph.GPStoGraph.verify_columns"><code class="docutils literal notranslate"><span class="pre">GPStoGraph.verify_columns()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-xyt.xyt_plot">xyt.xyt_plot module</a><ul>
+<li><a class="reference internal" href="#xyt.xyt_plot.plot_gps_on_map"><code class="docutils literal notranslate"><span class="pre">plot_gps_on_map()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-xyt">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">xyt</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">xyt package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/xyt.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="xyt-package">
+<h1>xyt package<a class="headerlink" href="#xyt-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-xyt.fake_data_generator">
+<span id="xyt-fake-data-generator-module"></span><h2>xyt.fake_data_generator module<a class="headerlink" href="#module-xyt.fake_data_generator" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="xyt.fake_data_generator.FakeDataGenerator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">xyt.fake_data_generator.</span></span><span class="sig-name descname"><span class="pre">FakeDataGenerator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">projection_epsg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4326</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">location_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">home_radius_km</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_users</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/fake_data_generator.html#FakeDataGenerator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.fake_data_generator.FakeDataGenerator" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class for generating fake location-based data for testing and demonstration purposes.</p>
+<dl>
+<dt>Attributes:</dt><dd><ul class="simple">
+<li><p>projection_epsg (int): The EPSG code for the desired projection (default is 4326).</p></li>
+<li><p>location_name (str): The name of a location for which to generate data. If provided, the generated data will be constrained within the bounding box of this location.</p></li>
+<li><p>home_radius_km (int): The radius in kilometers within which home locations for different groups should be generated.</p></li>
+</ul>
+</dd>
+<dt>Example usage:</dt><dd><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">generator</span> <span class="o">=</span> <span class="n">FakeDataGenerator</span><span class="p">(</span><span class="n">location_name</span><span class="o">=</span><span class="s2">&quot;Switzerland&quot;</span><span class="p">,</span> <span class="n">num_users</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
+<span class="n">df_legs</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">generate_legs</span><span class="p">(</span><span class="n">num_rows</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">df_staypoints</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">generate_staypoints</span><span class="p">(</span><span class="n">num_rows</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">df_waypoints</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">generate_waypoints</span><span class="p">(</span><span class="n">num_rows</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.fake_data_generator.FakeDataGenerator.generate_dataframe">
+<span class="sig-name descname"><span class="pre">generate_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trace_type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/fake_data_generator.html#FakeDataGenerator.generate_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.fake_data_generator.FakeDataGenerator.generate_dataframe" title="Link to this definition"></a></dt>
+<dd><p>Generate a GeoDataFrame with synthetic location-based data for multiple groups.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>num_rows (int): The number of data rows to generate for each group.</p></li>
+<li><p>trace_type (str): The type of data to generate (‘Staypoint’ or ‘Leg’).</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>GeoDataFrame: A GeoDataFrame containing the generated location-based data.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.fake_data_generator.FakeDataGenerator.generate_home_location">
+<span class="sig-name descname"><span class="pre">generate_home_location</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/fake_data_generator.html#FakeDataGenerator.generate_home_location"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.fake_data_generator.FakeDataGenerator.generate_home_location" title="Link to this definition"></a></dt>
+<dd><p>Generate a random home location point.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>Point: A Shapely Point object representing the home location.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.fake_data_generator.FakeDataGenerator.generate_intermediate_points">
+<span class="sig-name descname"><span class="pre">generate_intermediate_points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0.0001,</span> <span class="pre">0.005)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/fake_data_generator.html#FakeDataGenerator.generate_intermediate_points"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.fake_data_generator.FakeDataGenerator.generate_intermediate_points" title="Link to this definition"></a></dt>
+<dd><p>Generate intermediate points between two given points.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>point_start (Point): The starting point.</p></li>
+<li><p>point_end (Point): The ending point.</p></li>
+<li><p>num_points (int): The number of intermediate points to generate.</p></li>
+<li><p>noise_range (tuple, optional): Range for generating random noise (default is (0.0001, 0.005)).</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>list: A list of Shapely Point objects representing intermediate points.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.fake_data_generator.FakeDataGenerator.generate_legs">
+<span class="sig-name descname"><span class="pre">generate_legs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/fake_data_generator.html#FakeDataGenerator.generate_legs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.fake_data_generator.FakeDataGenerator.generate_legs" title="Link to this definition"></a></dt>
+<dd><p>Generate synthetic location-based data representing movement between locations (legs) for multiple users.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>num_rows (int, optional): The number of data rows to generate for each user (default is 15).</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>GeoDataFrame: A GeoDataFrame containing the generated legs data.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.fake_data_generator.FakeDataGenerator.generate_random_point_in_location">
+<span class="sig-name descname"><span class="pre">generate_random_point_in_location</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">home_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/fake_data_generator.html#FakeDataGenerator.generate_random_point_in_location"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.fake_data_generator.FakeDataGenerator.generate_random_point_in_location" title="Link to this definition"></a></dt>
+<dd><p>Generate a random point within the specified location.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>home_location (Point, optional): The home location within which to generate the random point.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>Point: A Shapely Point object representing the random point within the location.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.fake_data_generator.FakeDataGenerator.generate_staypoints">
+<span class="sig-name descname"><span class="pre">generate_staypoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/fake_data_generator.html#FakeDataGenerator.generate_staypoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.fake_data_generator.FakeDataGenerator.generate_staypoints" title="Link to this definition"></a></dt>
+<dd><p>Generate synthetic location-based data representing user staypoints at various locations.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>num_rows (int, optional): The number of data rows to generate for each user (default is 15).</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>GeoDataFrame: A GeoDataFrame containing the generated staypoints data.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.fake_data_generator.FakeDataGenerator.generate_waypoints">
+<span class="sig-name descname"><span class="pre">generate_waypoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_extra_od_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_displacement_meters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/fake_data_generator.html#FakeDataGenerator.generate_waypoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.fake_data_generator.FakeDataGenerator.generate_waypoints" title="Link to this definition"></a></dt>
+<dd><p>Generate synthetic location-based data representing waypoints with timestamps and accuracy for multiple users.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>num_rows (int, optional): The number of data rows to generate for each user (default is 15).</p></li>
+<li><p>num_extra_od_points (int, optional): The number of extra points to add at the beginning and end of each linestring (default is 2).</p></li>
+<li><p>max_displacement_meters (float, optional): The maximum displacement in meters for the extra points (default is 10 meters).</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>GeoDataFrame: A GeoDataFrame containing the generated waypoints data.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.fake_data_generator.FakeDataGenerator.get_bounding_box">
+<span class="sig-name descname"><span class="pre">get_bounding_box</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/fake_data_generator.html#FakeDataGenerator.get_bounding_box"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.fake_data_generator.FakeDataGenerator.get_bounding_box" title="Link to this definition"></a></dt>
+<dd><p>Retrieve the bounding box coordinates for a specified location.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>location_name (str): The name of the location for which to retrieve the bounding box.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>list: A list of bounding box coordinates [south, north, west, east].</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-xyt.gps_analytics">
+<span id="xyt-gps-analytics-module"></span><h2>xyt.gps_analytics module<a class="headerlink" href="#module-xyt.gps_analytics" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="xyt.gps_analytics.GPSAnalytics">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">xyt.gps_analytics.</span></span><span class="sig-name descname"><span class="pre">GPSAnalytics</span></span><a class="reference internal" href="_modules/xyt/gps_analytics.html#GPSAnalytics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_analytics.GPSAnalytics" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Performs analytics on GPS data, including splitting activities over midnight,
+spatial clustering, deriving metrics, and computing daily statistics.</p>
+<p>This class offers methods to manipulate GPS data stored in DataFrames. It provides
+functionalities to split activities that span midnight into two, perform spatial
+clustering using DBSCAN, derive various metrics related to trips and activities,
+and compute daily descriptive statistics.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_analytics.GPSAnalytics.get_daily_metrics">
+<span class="sig-name descname"><span class="pre">get_daily_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ext_staypoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_analytics.html#GPSAnalytics.get_daily_metrics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_analytics.GPSAnalytics.get_daily_metrics" title="Link to this definition"></a></dt>
+<dd><p>Constructs a matrix of daily descriptive statistics.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>ext_staypoint: DataFrame with relevant columns. Columns: ‘started_at’, ‘finished_at’, ‘user_id’, ‘duration’, ‘cluster’, ‘cluster_size’, ‘cluster_info’, ‘location_id’, ‘peak’, ‘first_dep’, ‘last_arr’, ‘home_loop’, ‘daily_trip_dist’, ‘num_trip’, ‘max_dist’, ‘min_dist’, ‘max_dist_from_home’, ‘dist_from_home’, ‘home_location_id’, ‘weekday’</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>DataFrame with computed daily profiles.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_analytics.GPSAnalytics.get_metrics">
+<span class="sig-name descname"><span class="pre">get_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">staypoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">leg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_analytics.html#GPSAnalytics.get_metrics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_analytics.GPSAnalytics.get_metrics" title="Link to this definition"></a></dt>
+<dd><p>Computes additional variables and metrics.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>staypoint: DataFrame with activity data. Columns: ‘activity_id’, ‘started_at’, ‘finished_at’, ‘purpose’, ‘user_id’, ‘lon’, ‘lat’</p></li>
+<li><p>leg: DataFrame with leg data. Columns: ‘leg_id’, ‘started_at’, ‘finished_at’, ‘detected_mode’, ‘mode’, ‘user_id’, ‘geometry’, ‘next_activity_id’, ‘length’, ‘duration’</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>DataFrame with computed metrics.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_analytics.GPSAnalytics.spatial_clustering">
+<span class="sig-name descname"><span class="pre">spatial_clustering</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">staypoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_analytics.html#GPSAnalytics.spatial_clustering"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_analytics.GPSAnalytics.spatial_clustering" title="Link to this definition"></a></dt>
+<dd><p>Aggregates locations of most visited places.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>staypoint: DataFrame containing activity locations. Columns: ‘activity_id’, ‘started_at’, ‘finished_at’, ‘purpose’, ‘user_id’, ‘lon’, ‘lat’</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>DataFrame with clustered locations and labels.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_analytics.GPSAnalytics.split_overnight">
+<span class="sig-name descname"><span class="pre">split_overnight</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">staypoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['started_at',</span> <span class="pre">'finished_at']</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_analytics.html#GPSAnalytics.split_overnight"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_analytics.GPSAnalytics.split_overnight" title="Link to this definition"></a></dt>
+<dd><p>Splits activities going over midnight into two activities.</p>
+<dl class="simple">
+<dt>Description:</dt><dd><ol class="arabic simple">
+<li><p>Split activities that go over midnight into two activities</p></li>
+<li><p>Allocate the same geolocation and activity purpose to the splitted activity</p></li>
+<li><p>Compute the duration of the splitted activities</p></li>
+</ol>
+</dd>
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>staypoint: DataFrame containing activities to split. Columns: ‘activity_id’, ‘started_at’, ‘finished_at’, ‘purpose’, ‘user_id’, ‘lon’, ‘lat’</p></li>
+<li><p>time_columns: Columns for activity start and end times.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>DataFrame with split activities and new ‘duration’ column.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_analytics.GPSAnalytics.verify_columns">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">verify_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/xyt/gps_analytics.html#GPSAnalytics.verify_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_analytics.GPSAnalytics.verify_columns" title="Link to this definition"></a></dt>
+<dd><p>Verifies if expected columns are present in the DataFrame.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df: DataFrame to check columns in.</p></li>
+<li><p>expected_columns: List of expected column names.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-xyt.gps_data_privacy">
+<span id="xyt-gps-data-privacy-module"></span><h2>xyt.gps_data_privacy module<a class="headerlink" href="#module-xyt.gps_data_privacy" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="xyt.gps_data_privacy.GPSDataPrivacy">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">xyt.gps_data_privacy.</span></span><span class="sig-name descname"><span class="pre">GPSDataPrivacy</span></span><a class="reference internal" href="_modules/xyt/gps_data_privacy.html#GPSDataPrivacy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_privacy.GPSDataPrivacy" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class for obfuscating and aggregating GPS data to enhance privacy.</p>
+<p>This class provides methods to obfuscate GPS data by adding noise, shifting coordinates,
+and aggregating data within defined cell centers. It also calculates utility metrics for
+evaluating the impact of obfuscation on the data.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_privacy.GPSDataPrivacy.aggregate">
+<span class="sig-name descname"><span class="pre">aggregate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">waypoints_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">datetime.timedelta(seconds=900)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_data_privacy.html#GPSDataPrivacy.aggregate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_privacy.GPSDataPrivacy.aggregate" title="Link to this definition"></a></dt>
+<dd><p>Aggregates users in timedeltas and cells on the map.
+Returns a DataFrame with the count of users in a given timedelta and cell.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>waypoints_df (pandas.DataFrame): DataFrame with ‘latitude’, ‘longitude’, ‘user_id’ and ‘tracked_at’ columns.</p></li>
+<li><p>cell_size (float): Size of the square cells on the map, in kilometers.</p></li>
+<li><p>delta (datetime.timedelta): Frequency for the time aggregation, e.g. 15 minutes.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>pandas.DataFrame: DataFrame with ‘tracked_at’, ‘cell_latitude’, ‘cell_longitude’ and ‘count’ columns.</dt><dd><p>The ‘cell_latitude’ and ‘cell_longitude’ columns give coordinates of the centers of cells on the map.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_privacy.GPSDataPrivacy.get_obfuscation_utility">
+<span class="sig-name descname"><span class="pre">get_obfuscation_utility</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">w_prepared</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w_obfuscated</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">legs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="_modules/xyt/gps_data_privacy.html#GPSDataPrivacy.get_obfuscation_utility"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_privacy.GPSDataPrivacy.get_obfuscation_utility" title="Link to this definition"></a></dt>
+<dd><p>Calculates the ratio of legs affected by obfuscation to total legs.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>w_prepared (pandas.DataFrame): Smoothed and cleaned waypoints DataFrame.</p></li>
+<li><p>w_obfuscated (pandas.DataFrame): Smoothed, cleaned, and obfuscated waypoints DataFrame.</p></li>
+<li><p>legs (pandas.DataFrame): DataFrame that contains assembled legs.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>[float]: Ratio of legs affected by obfuscation to total legs.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_privacy.GPSDataPrivacy.obfuscate">
+<span class="sig-name descname"><span class="pre">obfuscate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">df,</span> <span class="pre">locations,</span> <span class="pre">radius=100,</span> <span class="pre">offset=30,</span> <span class="pre">mode='remove')</span> <span class="pre">-&gt;</span> <span class="pre">(&lt;class</span> <span class="pre">'pandas.core.frame.DataFrame'&gt;,</span> <span class="pre">list[tuple[float,</span> <span class="pre">float]]</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_privacy.html#GPSDataPrivacy.obfuscate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_privacy.GPSDataPrivacy.obfuscate" title="Link to this definition"></a></dt>
+<dd><p>Obfuscates the regions of points given in ‘locations’ parameter
+by either removing all the points in their proximity or changing the location
+of these points to one noisy location in the proximity circle.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): DataFrame with ‘latitude’ and ‘longitude’ columns.</p></li>
+<li><p>locations (list): List of locations given as (latitude, longitude) tuples.</p></li>
+<li><p>radius (int, optional): Radius of the obfuscation circle. Defaults to 100.</p></li>
+<li><p>offset (int, optional): Smallest distance from the perimeter of the obfuscation circle at which the location of interest must be located. Defaults to 30.</p></li>
+<li><p>mode (str, optional): Obfuscation mode, can be either ‘remove’ or ‘assign’. Defaults to ‘remove’.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: DataFrame with obfuscated regions.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-xyt.gps_data_processor">
+<span id="xyt-gps-data-processor-module"></span><h2>xyt.gps_data_processor module<a class="headerlink" href="#module-xyt.gps_data_processor" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">xyt.gps_data_processor.</span></span><span class="sig-name descname"><span class="pre">GPSDataProcessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_gap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">850</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">speed_th</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.78</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acceleration_th</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minimal_walking_duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minimal_trip_duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">120</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_multiprocessing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>GPSDataProcessor is a class designed for processing GPS data, including mode detection and leg unification.</p>
+<p>This class provides methods for detecting user activities and modes of transportation in GPS data, as well as
+unifying individual legs and activities into meaningful segments.</p>
+<dl>
+<dt>Attributes:</dt><dd><ul class="simple">
+<li><p>speed_th (float): A threshold for detecting walks based on speed.</p></li>
+<li><p>acceleration_th (float): A threshold for detecting walks based on acceleration.</p></li>
+<li><p>minimal_walking_duration (float): Minimum duration required to classify a segment as a walk.</p></li>
+<li><p>minimal_trip_duration (float): Minimum duration required for a trip.</p></li>
+<li><p>use_multiprocessing (bool): Flag indicating whether to use multiple processes for parallel processing.</p></li>
+</ul>
+</dd>
+<dt>Example Usage:</dt><dd><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize GPSDataProcessor with custom Args</span>
+<span class="n">processor</span> <span class="o">=</span> <span class="n">GPSDataProcessor</span><span class="p">(</span><span class="n">speed_th</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">acceleration_th</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">minimal_walking_duration</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">minimal_trip_duration</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span> <span class="n">use_multiprocessing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">poi_waypoints</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">guess_home_work</span><span class="p">(</span><span class="n">waypoints</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">smoothed_df</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">smooth</span><span class="p">(</span><span class="n">poi_waypoints</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">segmented_df</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">segment</span><span class="p">(</span><span class="n">smoothed_df</span><span class="p">)</span>
+<span class="n">mode_df</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">mode_detection</span><span class="p">(</span><span class="n">segmented_df</span><span class="p">)</span>
+<span class="n">legs</span> <span class="o">=</span> <span class="n">data_processor</span><span class="o">.</span><span class="n">get_legs</span><span class="p">(</span><span class="n">df</span> <span class="o">=</span> <span class="n">mode_df</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.activities_density">
+<span class="sig-name descname"><span class="pre">activities_density</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.activities_density"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.activities_density" title="Link to this definition"></a></dt>
+<dd><p>Detect activities by density.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>args (tuple): A tuple containing the waypoints DataFrame and a clusterer object.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: DataFrame with updated ‘detection’ column.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.assign_cell">
+<span class="sig-name descname"><span class="pre">assign_cell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">latitude</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">longitude</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.assign_cell"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.assign_cell" title="Link to this definition"></a></dt>
+<dd><p>Assign a cell number to a GPS point based on latitude and longitude.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>latitude (float): Latitude of the GPS point.</p></li>
+<li><p>longitude (float): Longitude of the GPS point.</p></li>
+<li><p>cell_size (float): Size of the grid cell.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>int: Cell number for the GPS point.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.correct_clusters">
+<span class="sig-name descname"><span class="pre">correct_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.correct_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.correct_clusters" title="Link to this definition"></a></dt>
+<dd><p>Correct detected clusters by merging them based on time and speed.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): DataFrame with ‘detection’, ‘speed’, and ‘time_delta’ columns.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.create_route">
+<span class="sig-name descname"><span class="pre">create_route</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.create_route"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.create_route" title="Link to this definition"></a></dt>
+<dd><p>Calculate additional statistics such as distance, time delta, speed, and acceleration for GPS waypoints.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): The waypoints DataFrame to be processed.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: Waypoints DataFrame with additional statistics.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.get_legs">
+<span class="sig-name descname"><span class="pre">get_legs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.get_legs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.get_legs" title="Link to this definition"></a></dt>
+<dd><p>Extract legs and activities from a DataFrame and aggregate the data for each leg or activity.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): DataFrame with GPS data, including ‘detection’, ‘user_id’, and ‘type’ columns.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: DataFrame with aggregated legs and activities.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.guess_home_work">
+<span class="sig-name descname"><span class="pre">guess_home_work</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">waypoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.guess_home_work"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.guess_home_work" title="Link to this definition"></a></dt>
+<dd><p>Guess and assign home and work locations to waypoints based on processed GPS data.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>waypoints (pandas.DataFrame): DataFrame with GPS waypoints.</p></li>
+<li><p>cell_size (float): Size of the grid cell.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: DataFrame with ‘home_loc’ and ‘work_loc’ columns added.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.haversine_distance">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">haversine_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.haversine_distance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.haversine_distance" title="Link to this definition"></a></dt>
+<dd><p>Calculate the Haversine distance between two GPS coordinates.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>lat1 (float): Latitude of the first point.</p></li>
+<li><p>lon1 (float): Longitude of the first point.</p></li>
+<li><p>lat2 (float): Latitude of the second point.</p></li>
+<li><p>lon2 (float): Longitude of the second point.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>float: Haversine distance in meters.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.mode_detection">
+<span class="sig-name descname"><span class="pre">mode_detection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.mode_detection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.mode_detection" title="Link to this definition"></a></dt>
+<dd><p>Perform mode detection on a DataFrame, including walk detection and other modes using fuzzy logic.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): DataFrame with GPS data.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: DataFrame with modes and walk tags in the ‘estimated_mode’ and ‘detection’ columns.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.prepare_for_detection">
+<span class="sig-name descname"><span class="pre">prepare_for_detection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.prepare_for_detection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.prepare_for_detection" title="Link to this definition"></a></dt>
+<dd><p>Flag detections as trips by default.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): Waypoints DataFrame to be flagged.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: DataFrame with ‘detection’ column set to ‘trip’.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.process_gps_data">
+<span class="sig-name descname"><span class="pre">process_gps_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">waypoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.process_gps_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.process_gps_data" title="Link to this definition"></a></dt>
+<dd><p>Process GPS data to detect home and work locations for users.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>waypoints (pandas.DataFrame): DataFrame with GPS waypoints.</p></li>
+<li><p>cell_size (float): Size of the grid cell.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>dict: A dictionary containing user IDs as keys and their detected home and work locations as values.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.segment">
+<span class="sig-name descname"><span class="pre">segment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.segment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.segment" title="Link to this definition"></a></dt>
+<dd><p>Segment waypoints for all unique user_ids in the DataFrame.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): Waypoints DataFrame with user_ids.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: DataFrame with the segment starts and ends for all users.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.segment_per_user">
+<span class="sig-name descname"><span class="pre">segment_per_user</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.segment_per_user"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.segment_per_user" title="Link to this definition"></a></dt>
+<dd><p>Find clusters of waypoints for a specific user.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): Waypoints DataFrame to be processed.</p></li>
+<li><p>user_id (int or str): The user_id for which to perform segmentation.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: DataFrame with the segment starts and ends for the specified user.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_data_processor.GPSDataProcessor.smooth">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">smooth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accuracy_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'time'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_data_processor.html#GPSDataProcessor.smooth"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_data_processor.GPSDataProcessor.smooth" title="Link to this definition"></a></dt>
+<dd><p>Clean and preprocess a raw GPS points DataFrame using smoothing techniques.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): DataFrame with GPS points to be preprocessed.</p></li>
+<li><p>accuracy_threshold (int, optional): Accuracy threshold for filtering. Defaults to 100.</p></li>
+<li><p>sigma (int, optional): Sigma for Gaussian smoothing, defines the size of the smoothing window. Defaults to 10.</p></li>
+<li><p>smoothing_method (str, optional): Smoothing method (‘time’ or ‘space’). Defaults to ‘time’.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: Cleaned and preprocessed DataFrame.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-xyt.gps_to_actionspace">
+<span id="xyt-gps-to-actionspace-module"></span><h2>xyt.gps_to_actionspace module<a class="headerlink" href="#module-xyt.gps_to_actionspace" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="xyt.gps_to_actionspace.GPStoActionspace">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">xyt.gps_to_actionspace.</span></span><span class="sig-name descname"><span class="pre">GPStoActionspace</span></span><a class="reference internal" href="_modules/xyt/gps_to_actionspace.html#GPStoActionspace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_actionspace.GPStoActionspace" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class for analyzing GPS-based user activity and generating action spaces.</p>
+<p>This class provides methods to process GPS data, compute action spaces for users,
+visualize action spaces using Matplotlib and Folium, calculate covariance matrices,
+and compute innovation rates based on user activity motifs.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_actionspace.GPStoActionspace.compute_action_space">
+<span class="sig-name descname"><span class="pre">compute_action_space</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">act</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aggregation_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_to_actionspace.html#GPStoActionspace.compute_action_space"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_actionspace.GPStoActionspace.compute_action_space" title="Link to this definition"></a></dt>
+<dd><p>Compute action space Args for each user.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>act (pandas.DataFrame): DataFrame with user activity data.</p></li>
+<li><p>aggregation_method (str): Aggregation method (‘user_id’ or ‘user_id_day’).</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pandas.DataFrame: DataFrame with action space Args for each user.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_actionspace.GPStoActionspace.covariance_matrix">
+<span class="sig-name descname"><span class="pre">covariance_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">action_space:</span> <span class="pre">~pandas.core.frame.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">annot:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap=&lt;matplotlib.colors.LinearSegmentedColormap</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_to_actionspace.html#GPStoActionspace.covariance_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_actionspace.GPStoActionspace.covariance_matrix" title="Link to this definition"></a></dt>
+<dd><p>Map the correlation, covariance, or p-values of a set of observed variables.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>action_space (pandas.DataFrame): DataFrame with action space data.</p></li>
+<li><p>title (str): Title for the heatmap.</p></li>
+<li><p>annot (bool): If True, return the values in the heatmap cells.</p></li>
+<li><p>cmap: Color map for the heatmap.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Returns:
+- Heatmap of correlation, covariance, or p-values of observed variables.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_actionspace.GPStoActionspace.modified_std_distance">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">modified_std_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">center</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="_modules/xyt/gps_to_actionspace.html#GPStoActionspace.modified_std_distance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_actionspace.GPStoActionspace.modified_std_distance" title="Link to this definition"></a></dt>
+<dd><p>Calculate standard distance of a point array like std_distance() does in PySAL with the mean center, but we can specify here a different center.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>pp: point pattern</p></li>
+<li><p>center: array([ x, y])</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>float: standard distance</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_actionspace.GPStoActionspace.plot_action_space">
+<span class="sig-name descname"><span class="pre">plot_action_space</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">act</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">action_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">how</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'vignette'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/gps_to_actionspace.html#GPStoActionspace.plot_action_space"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_actionspace.GPStoActionspace.plot_action_space" title="Link to this definition"></a></dt>
+<dd><p>Plot the action space for a specific user.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>act (pandas.DataFrame): DataFrame with user activity data.</p></li>
+<li><p>action_space (pandas.DataFrame): DataFrame with action space data.</p></li>
+<li><p>user (str): User ID for whom the action space will be plotted.</p></li>
+<li><p>how (str): Plotting method (‘vignette’ or ‘folium’).</p></li>
+<li><p>save (bool): If True, save the plot.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>Visualization of the action space.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_actionspace.GPStoActionspace.plot_ellipses">
+<span class="sig-name descname"><span class="pre">plot_ellipses</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">action_space</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aggregation_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Map</span></span></span><a class="reference internal" href="_modules/xyt/gps_to_actionspace.html#GPStoActionspace.plot_ellipses"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_actionspace.GPStoActionspace.plot_ellipses" title="Link to this definition"></a></dt>
+<dd><p>Plot ellipses on a Folium map based on action space data.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>action_space (pandas.DataFrame): DataFrame with action space data.</p></li>
+<li><p>aggregation_method (str): Aggregation method (‘user_id’ or ‘user_id_day’).</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>folium.Map: Folium map with ellipses.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_actionspace.GPStoActionspace.verify_columns">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">verify_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/xyt/gps_to_actionspace.html#GPStoActionspace.verify_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_actionspace.GPStoActionspace.verify_columns" title="Link to this definition"></a></dt>
+<dd><p>Verify if expected columns are present in the DataFrame.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pandas.DataFrame): DataFrame to check.</p></li>
+<li><p>expected_columns (list[str]): List of column names expected in the DataFrame.</p></li>
+</ul>
+</dd>
+<dt>Raises:</dt><dd><ul class="simple">
+<li><p>ValueError: If columns are missing in the DataFrame.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-xyt.gps_to_graph">
+<span id="xyt-gps-to-graph-module"></span><h2>xyt.gps_to_graph module<a class="headerlink" href="#module-xyt.gps_to_graph" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="xyt.gps_to_graph.GPStoGraph">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">xyt.gps_to_graph.</span></span><span class="sig-name descname"><span class="pre">GPStoGraph</span></span><a class="reference internal" href="_modules/xyt/gps_to_graph.html#GPStoGraph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_graph.GPStoGraph" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_graph.GPStoGraph.get_graphs">
+<span class="sig-name descname"><span class="pre">get_graphs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_to_graph.html#GPStoGraph.get_graphs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_graph.GPStoGraph.get_graphs" title="Link to this definition"></a></dt>
+<dd><p>Extracts motifs and graphs from GPS data.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pd.DataFrame): DataFrame containing GPS data.</p></li>
+<li><p>verbose (bool): Verbosity for multiprocessing (default is True).</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pd.DataFrame: DataFrame with extracted motifs and graphs.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_graph.GPStoGraph.motif_sequence">
+<span class="sig-name descname"><span class="pre">motif_sequence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mtf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/xyt/gps_to_graph.html#GPStoGraph.motif_sequence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_graph.GPStoGraph.motif_sequence" title="Link to this definition"></a></dt>
+<dd><p>Generates motif sequences for users based on motif data.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>mtf (pd.DataFrame): DataFrame containing motif data.</p></li>
+<li><p>n_cols (int): Number of columns for the motif sequence (default is 60).</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>pd.DataFrame: DataFrame with generated motif sequences for users.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_graph.GPStoGraph.plot_graph">
+<span class="sig-name descname"><span class="pre">plot_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mtf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/xyt/gps_to_graph.html#GPStoGraph.plot_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_graph.GPStoGraph.plot_graph" title="Link to this definition"></a></dt>
+<dd><p>Creates GIFs displaying the graph motif for multiple users.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>mtf (pd.DataFrame): DataFrame containing motif data.</p></li>
+<li><p>path (str): Path to save the GIFs (default is ‘’).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_graph.GPStoGraph.plot_motif">
+<span class="sig-name descname"><span class="pre">plot_motif</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mtf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/xyt/gps_to_graph.html#GPStoGraph.plot_motif"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_graph.GPStoGraph.plot_motif" title="Link to this definition"></a></dt>
+<dd><p>Plots motifs and their frequency distribution.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>mtf (pd.DataFrame): DataFrame containing motif data.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="xyt.gps_to_graph.GPStoGraph.verify_columns">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">verify_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/xyt/gps_to_graph.html#GPStoGraph.verify_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.gps_to_graph.GPStoGraph.verify_columns" title="Link to this definition"></a></dt>
+<dd><p>Checks for missing columns in a DataFrame.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pd.DataFrame): DataFrame to check columns.</p></li>
+<li><p>expected_columns (list[str]): List of expected column names.</p></li>
+</ul>
+</dd>
+<dt>Raises:</dt><dd><ul class="simple">
+<li><p>ValueError: If columns in <cite>expected_columns</cite> are missing in the DataFrame.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-xyt.xyt_plot">
+<span id="xyt-xyt-plot-module"></span><h2>xyt.xyt_plot module<a class="headerlink" href="#module-xyt.xyt_plot" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="xyt.xyt_plot.plot_gps_on_map">
+<span class="sig-prename descclassname"><span class="pre">xyt.xyt_plot.</span></span><span class="sig-name descname"><span class="pre">plot_gps_on_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trace_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">home_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">work_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/xyt/xyt_plot.html#plot_gps_on_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#xyt.xyt_plot.plot_gps_on_map" title="Link to this definition"></a></dt>
+<dd><p>Plot location-based data on a Folium map with different colors for each group.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><ul class="simple">
+<li><p>df (pd.DataFrame): A Pandas DataFrame containing the location-based data to be plotted.</p></li>
+<li><p>trace_type (str, optional): The type of data to be plotted (‘Stay’, ‘Track’, or ‘Waypoint’). If provided, only data of the specified trace type will be plotted.</p></li>
+<li><p>home_col (str, optional): Name of the column containing the home coordinates. Default is None.</p></li>
+<li><p>work_col (str, optional): Name of the column containing the work coordinates. Default is None.</p></li>
+<li><p>geo_columns (str or list, optional): Name of the column(s) containing the latitude and longitude coordinates. Can be a string (e.g., ‘geometry’) or a list (e.g., [‘latitude’, ‘longitude’]). Default is None.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><ul class="simple">
+<li><p>Interactive Folium map.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-xyt">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-xyt" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marc-Edouard Schultheiss.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
