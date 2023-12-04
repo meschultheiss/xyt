@@ -1,19 +1,20 @@
-# xyt-demo
+# xyt
 
 ## Usage
 
 Install the xyt library
 
 ```bash
-cd xyt-demo
-pip install -e .
+pip install xyt
 ```
 
-This repository uses black for code formatting. To format your code, run
+## Documentation
 
-```bash
-black .
-```
+(Full documentation here)[https://meschultheiss.github.io/xyt/py-modindex.html]
+
+## Scientific methods
+
+(More documentation here)[https://situee.ch/articles/xyt/scientific-report]
 
 ## Input gps format
 

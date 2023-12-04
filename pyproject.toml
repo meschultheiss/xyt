@@ -1,48 +1,44 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "xyt"
 version = "0.1.0"
-dependencies = [
-    'numpy',
-    'pandas',
-    'folium',
-    'streamlit-folium',
-    'faker',
-    'shapely',
-    'geopandas',
-    'geopy',
-    'numba',
-    'more_itertools',
-    'scikit-fuzzy',
-    'haversine',
-    'scikit-learn',
-    'ipython',
-    'pathos',
-    'osmnx',
-    'gif',
-    'utm',
-    'plotly',
-    'seaborn',
-    'pointpats',
-    'pysal',
-    'contextily'
-]
-requires-python = ">=3.8"
-authors = [
-  {name = "Marc-Edouard Schultheiss <meschultheiss@gmail.com>"},
-]
-maintainers = [
-  {name = "Marc-Edouard Schultheiss <meschultheiss@gmail.com>"}
-]
+authors = ["Marc-Edouard Schultheiss <meschultheiss@gmail.com>"]
+maintainers = ["Marc-Edouard Schultheiss <meschultheiss@gmail.com>"]
 description = "xyt is a python package for processing raw gps data into mobility data. xyt offers privacy-based capabilities and aims to provide a plug-and-play pipeline to leverage gps data."
 readme = "README.md"
-license = {file = "LICENSE.txt"}
+license = "MIT"  # Fix: Change from table to string
 keywords = ["xyt", "gps", "mobility"]
 classifiers = [
     'Programming Language :: Python :: 3',
     'License :: OSI Approved :: MIT License',
     'Operating System :: OS Independent',
 ]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+numpy = "*"
+pandas = "*"
+folium = "*"
+streamlit-folium = "*"
+faker = "*"
+shapely = "*"
+geopandas = "*"
+geopy = "*"
+numba = "*"
+more-itertools = "*"
+scikit-fuzzy = "*"
+haversine = "*"
+scikit-learn = "*"
+ipython = "*"
+pathos = "*"
+osmnx = "*"
+gif = "*"
+utm = "*"
+plotly = "*"
+seaborn = "*"
+pointpats = "*"
+pysal = "*"
+contextily = "*"
