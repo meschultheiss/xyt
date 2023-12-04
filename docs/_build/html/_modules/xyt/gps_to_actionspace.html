@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xyt.gps_to_actionspace &mdash; xyt 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            xyt
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">xyt</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">xyt.gps_to_actionspace</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for xyt.gps_to_actionspace</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Data Manipulation and Analysis</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">geopandas</span> <span class="k">as</span> <span class="nn">gpd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pyproj</span>
+
+<span class="c1"># Visualization</span>
+<span class="kn">import</span> <span class="nn">plotly.graph_objects</span> <span class="k">as</span> <span class="nn">go</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">contextily</span> <span class="k">as</span> <span class="nn">ctx</span>
+<span class="kn">from</span> <span class="nn">pointpats.centrography</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">mean_center</span><span class="p">,</span>
+    <span class="n">weighted_mean_center</span><span class="p">,</span>
+    <span class="n">euclidean_median</span><span class="p">,</span>
+    <span class="n">dtot</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">MultiPoint</span>
+<span class="kn">from</span> <span class="nn">matplotlib.patches</span> <span class="kn">import</span> <span class="n">Ellipse</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial</span> <span class="kn">import</span> <span class="n">distance</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">Point</span>
+<span class="kn">import</span> <span class="nn">folium</span>
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">pointpats</span>
+
+
+<div class="viewcode-block" id="GPStoActionspace">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_actionspace.GPStoActionspace">[docs]</a>
+<span class="k">class</span> <span class="nc">GPStoActionspace</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for analyzing GPS-based user activity and generating action spaces.</span>
+
+<span class="sd">    This class provides methods to process GPS data, compute action spaces for users,</span>
+<span class="sd">    visualize action spaces using Matplotlib and Folium, calculate covariance matrices,</span>
+<span class="sd">    and compute innovation rates based on user activity motifs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;figure.figsize&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;figure.dpi&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">120</span>  <span class="c1"># 200 e.g. is really fine, but slower</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">set_theme</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">)</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">set_palette</span><span class="p">(</span><span class="s2">&quot;Pastel2_r&quot;</span><span class="p">)</span>
+        <span class="n">cm</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">light_palette</span><span class="p">(</span><span class="s2">&quot;#fff4ac&quot;</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GPStoActionspace.verify_columns">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_actionspace.GPStoActionspace.verify_columns">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">verify_columns</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">expected_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Verify if expected columns are present in the DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): DataFrame to check.</span>
+<span class="sd">            - expected_columns (list[str]): List of column names expected in the DataFrame.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            - ValueError: If columns are missing in the DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">missing_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">expected_columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing_columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Columns missing in DataFrame: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GPStoActionspace.modified_std_distance">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_actionspace.GPStoActionspace.modified_std_distance">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">modified_std_distance</span><span class="p">(</span><span class="n">pp</span><span class="p">,</span> <span class="n">center</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate standard distance of a point array like std_distance() does in PySAL with the mean center, but we can specify here a different center.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - pp: point pattern</span>
+<span class="sd">            - center: array([ x, y])</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - float: standard distance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+            <span class="mi">1</span>
+            <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">pp</span><span class="p">)</span>
+            <span class="o">*</span> <span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">pp</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">pp</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GPStoActionspace.compute_action_space">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_actionspace.GPStoActionspace.compute_action_space">[docs]</a>
+    <span class="k">def</span> <span class="nf">compute_action_space</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">act</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">aggregation_method</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute action space Args for each user.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - act (pandas.DataFrame): DataFrame with user activity data.</span>
+<span class="sd">            - aggregation_method (str): Aggregation method (&#39;user_id&#39; or &#39;user_id_day&#39;).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with action space Args for each user.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">action_space</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;lon&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;lat&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cluster_size&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cluster_info&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;location_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;home_location_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;num_trip&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;main_home_location_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dist_from_home&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;imputed_purpose&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verify_columns</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="n">cols</span><span class="p">)</span>
+
+        <span class="c1"># check if aggregation method is user_id or user_id_day</span>
+
+        <span class="k">if</span> <span class="n">aggregation_method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id_day&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;aggreg_method must be either user_id or user_id_day, not </span><span class="si">{</span><span class="n">aggregation_method</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">user_id_</span> <span class="ow">in</span> <span class="n">act</span><span class="p">[</span><span class="n">aggregation_method</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+            <span class="n">act_</span> <span class="o">=</span> <span class="n">act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">act</span><span class="p">[</span><span class="n">aggregation_method</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id_</span><span class="p">,</span> <span class="n">cols</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="c1"># get the main home id at user_id scale</span>
+            <span class="n">main_home_id</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">home_location_id</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">idxmax</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">main_home_id</span> <span class="o">==</span> <span class="s2">&quot;not_detected&quot;</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="c1"># elif np.any(act_.dist_from_home &gt; 3000000):</span>
+            <span class="c1">#    continue</span>
+            <span class="k">elif</span> <span class="n">act_</span><span class="o">.</span><span class="n">main_home_location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span> <span class="o">!=</span> <span class="n">act_</span><span class="o">.</span><span class="n">home_location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+                <span class="k">continue</span>
+            <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">act_</span><span class="o">.</span><span class="n">num_trip</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">act_</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;num_trip&quot;</span><span class="p">,</span> <span class="s2">&quot;dist_from_home&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="c1"># Assuming your DataFrame is called df</span>
+                <span class="n">act_</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+                    <span class="n">act_</span><span class="p">,</span>
+                    <span class="n">geometry</span><span class="o">=</span><span class="n">gpd</span><span class="o">.</span><span class="n">points_from_xy</span><span class="p">(</span><span class="n">act_</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="n">act_</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]),</span>
+                    <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Change the CRS to EPSG:2056</span>
+                <span class="n">act_</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span>
+                    <span class="s2">&quot;EPSG:2056&quot;</span>
+                <span class="p">)</span>  <span class="c1"># This should be a parameter to change in the method, but default set to this one</span>
+
+                <span class="c1"># Now, you can access the transformed x and y coordinates</span>
+                <span class="n">act_</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span> <span class="n">act_</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">act_</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span>
+
+                <span class="c1"># And drop duplicated locations (information of visit count is in cluster_size)</span>
+                <span class="n">act_</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="c1"># Differentiate most frequent locations from all locations</span>
+                <span class="n">act_freq</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">act_</span><span class="o">.</span><span class="n">cluster_info</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">&quot;Most visited&quot;</span><span class="p">,</span> <span class="s2">&quot;Frequent visit&quot;</span><span class="p">])</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">act_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Find mean center of a point array</span>
+                    <span class="n">mc_</span> <span class="o">=</span> <span class="n">mean_center</span><span class="p">(</span><span class="n">act_</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]])</span>
+                    <span class="c1"># Find weighted mean center of a marked point pattern.</span>
+                    <span class="n">wmc_</span> <span class="o">=</span> <span class="n">weighted_mean_center</span><span class="p">(</span><span class="n">act_</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]],</span> <span class="n">act_</span><span class="o">.</span><span class="n">cluster_size</span><span class="p">)</span>
+
+                    <span class="c1"># Calculate Args of standard deviational ellipse for a point pattern</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">act_</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                        <span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">theta</span> <span class="o">=</span> <span class="n">pointpats</span><span class="o">.</span><span class="n">centrography</span><span class="o">.</span><span class="n">ellipse</span><span class="p">(</span><span class="n">act_</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]])</span>
+                        <span class="n">theta_degree</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span>
+                            <span class="n">theta</span>
+                        <span class="p">)</span>  <span class="c1"># need degree of rotation to plot the ellipse</span>
+                        <span class="c1"># Calculate the surface of the SD ellipse of the action space, in square meters</span>
+                        <span class="n">surface_ellipse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">sx</span> <span class="o">*</span> <span class="n">sy</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">surface_ellipse</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="c1"># sx, sy, theta, theta_degree</span>
+
+                    <span class="c1"># Calculate the ellipse motplotlib objet</span>
+                    <span class="n">e</span> <span class="o">=</span> <span class="n">Ellipse</span><span class="p">(</span>
+                        <span class="n">xy</span><span class="o">=</span><span class="n">wmc_</span><span class="p">,</span>
+                        <span class="n">width</span><span class="o">=</span><span class="n">sx</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span>
+                        <span class="n">height</span><span class="o">=</span><span class="n">sy</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span>
+                        <span class="n">angle</span><span class="o">=-</span><span class="n">theta_degree</span><span class="p">,</span>
+                        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+                        <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;#c9cfbc&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>  <span class="c1"># angle is rotation in degrees (anti-clockwise)</span>
+
+                    <span class="c1"># Find the main home coordinates</span>
+                    <span class="n">find_home_geom</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="n">act_</span><span class="o">.</span><span class="n">location_id</span> <span class="o">==</span> <span class="n">act_</span><span class="o">.</span><span class="n">home_location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="s2">&quot;geometry&quot;</span><span class="p">,</span>
+                    <span class="p">]</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">find_home_geom</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">home_loc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                            <span class="p">[</span><span class="n">find_home_geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">find_home_geom</span><span class="o">.</span><span class="n">y</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
+                        <span class="p">)</span>
+                    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">find_home_geom</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">home_loc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                            <span class="p">[</span><span class="n">find_home_geom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">find_home_geom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
+                        <span class="p">)</span>
+
+                    <span class="c1"># Sum of Euclidean distances between event points and a selected point.</span>
+                    <span class="n">sum_dist_home</span> <span class="o">=</span> <span class="n">dtot</span><span class="p">(</span><span class="n">home_loc</span><span class="p">,</span> <span class="n">act_</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+
+                    <span class="c1"># Compute location regularity</span>
+                    <span class="n">n_all</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">act_</span><span class="p">)</span>
+                    <span class="n">n_freq</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">act_freq</span><span class="p">)</span>
+                    <span class="n">regularity</span> <span class="o">=</span> <span class="n">n_freq</span> <span class="o">/</span> <span class="n">n_all</span>
+
+                    <span class="c1"># Calculate standard distance between all nodes and home</span>
+                    <span class="n">std_dist_all</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modified_std_distance</span><span class="p">(</span><span class="n">act_</span><span class="p">,</span> <span class="n">home_loc</span><span class="p">)</span>
+                    <span class="c1"># Calculate standard distance between freq nodes and home</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">act_freq</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">std_dist_freq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">modified_std_distance</span><span class="p">(</span><span class="n">act_freq</span><span class="p">,</span> <span class="n">home_loc</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">std_dist_freq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+                    <span class="c1"># Calculate the proximity</span>
+                    <span class="n">proximity</span> <span class="o">=</span> <span class="n">std_dist_freq</span> <span class="o">/</span> <span class="n">std_dist_all</span>
+
+                    <span class="c1"># Calculate the Euclidean median for a point pattern.</span>
+                    <span class="n">median_</span> <span class="o">=</span> <span class="n">euclidean_median</span><span class="p">(</span><span class="n">act_</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+
+                    <span class="c1"># Get area of convex hull for frequent (i.e. habitual) locations in square meters</span>
+                    <span class="c1"># And Coefficient of intensity</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">act_freq</span><span class="o">.</span><span class="n">location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                        <span class="n">freq_hull_area</span> <span class="o">=</span> <span class="n">MultiPoint</span><span class="p">(</span><span class="n">act_freq</span><span class="o">.</span><span class="n">geometry</span><span class="p">)</span><span class="o">.</span><span class="n">convex_hull</span><span class="o">.</span><span class="n">area</span>
+                        <span class="n">intensity</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">MultiPoint</span><span class="p">(</span><span class="n">act_freq</span><span class="o">.</span><span class="n">geometry</span><span class="p">)</span><span class="o">.</span><span class="n">convex_hull</span><span class="o">.</span><span class="n">area</span>
+                            <span class="o">/</span> <span class="n">MultiPoint</span><span class="p">(</span><span class="n">act_</span><span class="o">.</span><span class="n">geometry</span><span class="p">)</span><span class="o">.</span><span class="n">convex_hull</span><span class="o">.</span><span class="n">area</span>
+                        <span class="p">)</span>
+                    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">act_freq</span><span class="o">.</span><span class="n">location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                        <span class="n">loc1</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">act_freq</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]]</span>
+                            <span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                                <span class="n">act_freq</span><span class="o">.</span><span class="n">location_id</span> <span class="o">==</span> <span class="n">act_freq</span><span class="o">.</span><span class="n">location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                            <span class="p">]</span>
+                            <span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+                        <span class="p">)</span>
+                        <span class="n">loc2</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">act_freq</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]]</span>
+                            <span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                                <span class="n">act_freq</span><span class="o">.</span><span class="n">location_id</span> <span class="o">==</span> <span class="n">act_freq</span><span class="o">.</span><span class="n">location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+                            <span class="p">]</span>
+                            <span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+                        <span class="p">)</span>
+
+                        <span class="n">coord1</span> <span class="o">=</span> <span class="n">loc1</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                        <span class="n">coord2</span> <span class="o">=</span> <span class="n">loc2</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+                        <span class="n">freq_hull_area</span> <span class="o">=</span> <span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">coord1</span><span class="p">,</span> <span class="n">coord2</span><span class="p">)</span>
+                        <span class="n">intensity</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">freq_hull_area</span> <span class="o">=</span> <span class="mi">0</span>
+                        <span class="n">intensity</span> <span class="o">=</span> <span class="mi">0</span>
+
+                    <span class="c1"># Calculate euclidean distance between weighted mean center and main home location in meters</span>
+                    <span class="n">home_shift</span> <span class="o">=</span> <span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">wmc_</span><span class="p">,</span> <span class="n">home_loc</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+
+                    <span class="n">action_space_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                        <span class="p">[</span>
+                            <span class="n">user_id_</span><span class="p">,</span>
+                            <span class="n">main_home_id</span><span class="p">,</span>
+                            <span class="n">sum_dist_home</span><span class="p">,</span>
+                            <span class="n">proximity</span><span class="p">,</span>
+                            <span class="n">std_dist_all</span><span class="p">,</span>
+                            <span class="n">std_dist_freq</span><span class="p">,</span>
+                            <span class="n">median_</span><span class="p">,</span>
+                            <span class="n">intensity</span><span class="p">,</span>
+                            <span class="n">regularity</span><span class="p">,</span>
+                            <span class="n">n_all</span><span class="p">,</span>
+                            <span class="n">n_freq</span><span class="p">,</span>
+                            <span class="n">freq_hull_area</span><span class="p">,</span>
+                            <span class="n">home_shift</span><span class="p">,</span>
+                            <span class="n">e</span><span class="p">,</span>
+                            <span class="n">surface_ellipse</span><span class="p">,</span>
+                            <span class="n">wmc_</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                            <span class="n">wmc_</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="n">sx</span><span class="p">,</span>
+                            <span class="n">sy</span><span class="p">,</span>
+                            <span class="n">theta_degree</span><span class="p">,</span>
+                        <span class="p">]</span>
+                    <span class="p">)</span>
+                    <span class="n">action_space</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">action_space_</span><span class="p">)</span>
+
+        <span class="n">columns_</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">aggregation_method</span><span class="p">,</span>
+            <span class="s2">&quot;main_home_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;sum_dist_home&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;proximity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;std_dist_all&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;std_dist_freq&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;median_&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;intensity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;regularity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;n_all&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;n_freq&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;freq_hull_area&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;home_shift&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ellipse_2056&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;surface_ellipse&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;wmc_x&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;wmc_y&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;sx&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;sy&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;theta_degree&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">action_space</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">action_space</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns_</span><span class="p">)</span>
+        <span class="n">action_space</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">aggregation_method</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Parse to float</span>
+        <span class="n">col_2</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;sum_dist_home&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;proximity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;std_dist_all&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;std_dist_freq&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;median_&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;intensity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;regularity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;n_all&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;n_freq&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;freq_hull_area&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;home_shift&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;surface_ellipse&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">action_space</span><span class="p">[</span><span class="n">col_2</span><span class="p">]</span> <span class="o">=</span> <span class="n">action_space</span><span class="p">[</span><span class="n">col_2</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">action_space</span></div>
+
+
+<div class="viewcode-block" id="GPStoActionspace.plot_ellipses">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_actionspace.GPStoActionspace.plot_ellipses">[docs]</a>
+    <span class="k">def</span> <span class="nf">plot_ellipses</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">action_space</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">aggregation_method</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">folium</span><span class="o">.</span><span class="n">Map</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot ellipses on a Folium map based on action space data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - action_space (pandas.DataFrame): DataFrame with action space data.</span>
+<span class="sd">            - aggregation_method (str): Aggregation method (&#39;user_id&#39; or &#39;user_id_day&#39;).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - folium.Map: Folium map with ellipses.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create a list to store ellipse geometries</span>
+        <span class="n">ellipse_geometries</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Define the source and target coordinate reference systems (CRS)</span>
+        <span class="n">source_crs</span> <span class="o">=</span> <span class="s2">&quot;EPSG:2056&quot;</span>
+        <span class="n">target_crs</span> <span class="o">=</span> <span class="s2">&quot;EPSG:4326&quot;</span>
+
+        <span class="c1"># Iterate through the DataFrame and add ellipses to the list</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">action_space</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="c1"># Extract ellipse information</span>
+            <span class="n">user_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="n">aggregation_method</span><span class="p">]</span>
+            <span class="n">ellipse</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;ellipse_2056&quot;</span><span class="p">]</span>
+
+            <span class="c1"># Convert ellipse to Polygon geometry</span>
+            <span class="n">ellipse_polygon</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">ellipse</span><span class="o">.</span><span class="n">get_verts</span><span class="p">())</span>
+            <span class="n">ellipse_coords</span> <span class="o">=</span> <span class="p">[[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">ellipse_polygon</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">]</span>
+
+            <span class="n">ellipse_polygon</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">ellipse</span><span class="o">.</span><span class="n">get_verts</span><span class="p">())</span>
+            <span class="n">ellipse_geometries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ellipse_polygon</span><span class="p">)</span>
+
+        <span class="c1"># Create a GeoDataFrame from the list of ellipse geometries</span>
+        <span class="n">ellipse_gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+            <span class="n">geometry</span><span class="o">=</span><span class="n">ellipse_geometries</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="n">source_crs</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="n">target_crs</span><span class="p">)</span>
+
+        <span class="c1"># Calculate the mean centroid of all ellipses</span>
+        <span class="n">mean_lat</span> <span class="o">=</span> <span class="n">ellipse_gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">geom</span><span class="p">:</span> <span class="n">geom</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">mean_lon</span> <span class="o">=</span> <span class="n">ellipse_gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">geom</span><span class="p">:</span> <span class="n">geom</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+        <span class="c1"># Create a Folium map centered around the mean centroid</span>
+        <span class="n">mymap</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">Map</span><span class="p">(</span>
+            <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">mean_lon</span><span class="p">,</span> <span class="n">mean_lat</span><span class="p">],</span> <span class="n">zoom_start</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">control_scale</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Iterate through the GeoDataFrame and add ellipses to the map</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">ellipse_gdf</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="c1"># Extract ellipse information</span>
+            <span class="n">user_id</span> <span class="o">=</span> <span class="n">idx</span>  <span class="c1"># Assuming user_id is the index in the GeoDataFrame</span>
+            <span class="n">ellipse_polygon</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span>
+
+            <span class="c1"># Convert ellipse to coordinates for Folium</span>
+            <span class="n">ellipse_coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ellipse_polygon</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+            <span class="n">ellipse_coords_t</span> <span class="o">=</span> <span class="p">[[</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">ellipse_coords</span><span class="p">]</span>
+
+            <span class="c1"># Add the ellipse to the map</span>
+            <span class="n">folium</span><span class="o">.</span><span class="n">Polygon</span><span class="p">(</span>
+                <span class="n">locations</span><span class="o">=</span><span class="n">ellipse_coords_t</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span>
+                <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">fill_color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span>
+                <span class="n">fill_opacity</span><span class="o">=</span><span class="mf">0.02</span><span class="p">,</span>
+                <span class="n">popup</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;User ID: </span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">mymap</span><span class="p">)</span>
+
+        <span class="c1"># Display the map</span>
+        <span class="k">return</span> <span class="n">mymap</span>  <span class="c1"># .save(&quot;ellipse_map.html&quot;)</span></div>
+
+
+<div class="viewcode-block" id="GPStoActionspace.covariance_matrix">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_actionspace.GPStoActionspace.covariance_matrix">[docs]</a>
+    <span class="k">def</span> <span class="nf">covariance_matrix</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">action_space</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">annot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">cmap</span><span class="o">=</span><span class="n">sns</span><span class="o">.</span><span class="n">diverging_palette</span><span class="p">(</span><span class="mi">360</span><span class="p">,</span> <span class="mi">65</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">as_cmap</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Map the correlation, covariance, or p-values of a set of observed variables.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - action_space (pandas.DataFrame): DataFrame with action space data.</span>
+<span class="sd">            - title (str): Title for the heatmap.</span>
+<span class="sd">            - annot (bool): If True, return the values in the heatmap cells.</span>
+<span class="sd">            - cmap: Color map for the heatmap.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">        - Heatmap of correlation, covariance, or p-values of observed variables.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;sum_dist_home&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;proximity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;std_dist_all&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;std_dist_freq&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;median_&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;intensity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;regularity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;n_all&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;n_freq&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;freq_hull_area&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;home_shift&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;surface_ellipse&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verify_columns</span><span class="p">(</span><span class="n">action_space</span><span class="p">,</span> <span class="n">cols</span><span class="p">)</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">action_space</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span>
+
+        <span class="n">X_</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">corr</span><span class="p">()</span>
+        <span class="n">vmin</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">title2</span> <span class="o">=</span> <span class="s2">&quot;Correlation matrix of X_&quot;</span>
+
+        <span class="c1"># Generate a mask for the upper triangle</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">triu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">X_</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Set the title</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">title</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="n">title2</span>  <span class="c1"># pre-set titles else specified titles</span>
+
+        <span class="c1"># Set up the matplotlib figure</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+
+        <span class="c1"># Draw the heatmap with the mask and correct aspect ratio</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span>
+            <span class="n">X_</span><span class="p">,</span>
+            <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
+            <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span>
+            <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span>
+            <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">center</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">square</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">linewidths</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+            <span class="n">cbar_kws</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;shrink&quot;</span><span class="p">:</span> <span class="mf">0.7</span><span class="p">},</span>
+            <span class="n">annot</span><span class="o">=</span><span class="n">annot</span><span class="p">,</span>
+            <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;.2g&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="GPStoActionspace.plot_action_space">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_to_actionspace.GPStoActionspace.plot_action_space">[docs]</a>
+    <span class="k">def</span> <span class="nf">plot_action_space</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">act</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">action_space</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">user</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">how</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;vignette&quot;</span><span class="p">,</span>
+        <span class="n">save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot the action space for a specific user.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - act (pandas.DataFrame): DataFrame with user activity data.</span>
+<span class="sd">            - action_space (pandas.DataFrame): DataFrame with action space data.</span>
+<span class="sd">            - user (str): User ID for whom the action space will be plotted.</span>
+<span class="sd">            - how (str): Plotting method (&#39;vignette&#39; or &#39;folium&#39;).</span>
+<span class="sd">            - save (bool): If True, save the plot.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - Visualization of the action space.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;lon&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;lat&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cluster_size&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cluster_info&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;location_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;home_location_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;num_trip&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;main_home_location_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dist_from_home&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;imputed_purpose&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="c1"># Determine aggregation method and check if it exists in the DataFrame</span>
+        <span class="k">if</span> <span class="s2">&quot;user_id&quot;</span> <span class="ow">in</span> <span class="n">action_space</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s2">&quot;user_id&quot;</span> <span class="o">==</span> <span class="n">action_space</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">aggregation_method</span> <span class="o">=</span> <span class="s2">&quot;user_id&quot;</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="s2">&quot;user_id_day&quot;</span> <span class="ow">in</span> <span class="n">action_space</span><span class="o">.</span><span class="n">columns</span>
+            <span class="ow">or</span> <span class="s2">&quot;user_id_day&quot;</span> <span class="o">==</span> <span class="n">action_space</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span>
+        <span class="p">):</span>
+            <span class="n">aggregation_method</span> <span class="o">=</span> <span class="s2">&quot;user_id_day&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No user_id_day or user_id column in act DataFrame&quot;</span><span class="p">)</span>
+
+        <span class="c1"># check if user exists in the DataFrame</span>
+        <span class="k">if</span> <span class="n">user</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">act</span><span class="p">[</span><span class="n">aggregation_method</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;User </span><span class="si">{</span><span class="n">user</span><span class="si">}</span><span class="s2"> not in the DataFrame&quot;</span><span class="p">)</span>
+
+        <span class="n">act_</span> <span class="o">=</span> <span class="n">act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">act</span><span class="p">[</span><span class="n">aggregation_method</span><span class="p">]</span> <span class="o">==</span> <span class="n">user</span><span class="p">,</span> <span class="n">cols</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="n">act_</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;num_trip&quot;</span><span class="p">,</span> <span class="s2">&quot;dist_from_home&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Assuming your DataFrame is called df</span>
+        <span class="n">act_</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+            <span class="n">act_</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">gpd</span><span class="o">.</span><span class="n">points_from_xy</span><span class="p">(</span><span class="n">act_</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="n">act_</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]),</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Change the CRS to EPSG:2056</span>
+        <span class="n">act_</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span>
+            <span class="s2">&quot;EPSG:2056&quot;</span>
+        <span class="p">)</span>  <span class="c1"># This should be a parameter to change in the method, but default set to this one</span>
+
+        <span class="c1"># Now, you can access the transformed x and y coordinates</span>
+        <span class="n">act_</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span> <span class="n">act_</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">act_</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span>
+
+        <span class="c1"># And drop duplicated locations (information of visit count is in cluster_size)</span>
+        <span class="n">act_</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;vignette&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_plot_action_space_vignette</span><span class="p">(</span><span class="n">act_</span><span class="p">,</span> <span class="n">action_space</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">save</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">how</span> <span class="o">==</span> <span class="s2">&quot;folium&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_action_space_folium</span><span class="p">(</span><span class="n">act_</span><span class="p">,</span> <span class="n">action_space</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">save</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;how must be either vignette or folium, not </span><span class="si">{</span><span class="n">how</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_plot_action_space_vignette</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">act_</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">action_space</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">user</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot the action space for a specific user using a vignette style.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - act_ (pandas.DataFrame): DataFrame with user activity data.</span>
+<span class="sd">            - action_space (pandas.DataFrame): DataFrame with action space data.</span>
+<span class="sd">            - user (str): User ID for whom the action space will be plotted.</span>
+<span class="sd">            - save (bool): If True, save the plot.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - Visualization of the action space using a vignette style.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create a GeoDataFrame for the points from act_</span>
+        <span class="n">geometry</span> <span class="o">=</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">act_</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span> <span class="n">act_</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">])]</span>
+        <span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span><span class="n">act_</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">geometry</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:2056&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Create a Matplotlib figure</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+        <span class="c1"># Plot Ellipse</span>
+
+        <span class="n">e</span> <span class="o">=</span> <span class="n">action_space</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">user</span><span class="p">,</span> <span class="s2">&quot;ellipse_2056&quot;</span><span class="p">]</span>
+
+        <span class="n">ellipse_polygon</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">get_verts</span><span class="p">())</span>
+        <span class="n">ellipse_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ellipse_polygon</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">xy</span><span class="p">)</span>
+
+        <span class="c1"># ellipse_coords_4326 = np.column_stack(transformer.transform(x, y) for x, y in zip(ellipse_coords[0], ellipse_coords[1]))</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span>
+            <span class="n">ellipse_coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">ellipse_coords</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+            <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Plot points from act_</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+            <span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span>
+            <span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+            <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;o&quot;</span><span class="p">,</span>
+            <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Points from act&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Plot wmc_ in green</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+            <span class="n">action_space</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">user</span><span class="p">,</span> <span class="s2">&quot;wmc_x&quot;</span><span class="p">],</span>
+            <span class="n">action_space</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">user</span><span class="p">,</span> <span class="s2">&quot;wmc_y&quot;</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">,</span>
+            <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;o&quot;</span><span class="p">,</span>
+            <span class="n">s</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Weighted mean center&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">find_home_geom</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="n">act_</span><span class="o">.</span><span class="n">location_id</span> <span class="o">==</span> <span class="n">act_</span><span class="o">.</span><span class="n">home_location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;geometry&quot;</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">find_home_geom</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">home_loc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">find_home_geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">find_home_geom</span><span class="o">.</span><span class="n">y</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">find_home_geom</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">home_loc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">find_home_geom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">find_home_geom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="c1"># Plot home_loc from act_ with a customized icon</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+            <span class="n">home_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">home_loc</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+            <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;^&quot;</span><span class="p">,</span>
+            <span class="n">s</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Home Location&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Add legend</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+        <span class="c1"># Set the extent of the plot based on the bounding box of the GeoDataFrame</span>
+        <span class="n">minx</span><span class="p">,</span> <span class="n">miny</span><span class="p">,</span> <span class="n">maxx</span><span class="p">,</span> <span class="n">maxy</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">total_bounds</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">minx</span> <span class="o">*</span> <span class="mf">0.998</span><span class="p">,</span> <span class="n">maxx</span> <span class="o">*</span> <span class="mf">1.002</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">miny</span> <span class="o">*</span> <span class="mf">0.998</span><span class="p">,</span> <span class="n">maxy</span> <span class="o">*</span> <span class="mf">1.002</span><span class="p">)</span>
+
+        <span class="c1"># Plot basemap using OpenStreetMap</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">add_basemap</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:2056&quot;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">ctx</span><span class="o">.</span><span class="n">providers</span><span class="o">.</span><span class="n">OpenStreetMap</span><span class="o">.</span><span class="n">Mapnik</span><span class="p">)</span>
+
+        <span class="c1"># Save and show the figure</span>
+        <span class="k">if</span> <span class="n">save</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;action_space_vignette_&quot;</span> <span class="o">+</span> <span class="n">user</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_plot_action_space_folium</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">act_</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">action_space</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">user</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot the action space for a specific user using Folium for interactive maps.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - act_ (pandas.DataFrame): DataFrame with user activity data.</span>
+<span class="sd">            - action_space (pandas.DataFrame): DataFrame with action space data.</span>
+<span class="sd">            - user (str): User ID for whom the action space will be plotted.</span>
+<span class="sd">            - save (bool): If True, save the interactive map.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - Folium interactive map displaying the action space for the given user.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Find weighted mean center of a marked point pattern.</span>
+        <span class="n">wmc_</span> <span class="o">=</span> <span class="n">weighted_mean_center</span><span class="p">(</span><span class="n">act_</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]],</span> <span class="n">act_</span><span class="o">.</span><span class="n">cluster_size</span><span class="p">)</span>
+
+        <span class="c1"># Convert wmc_ to &#39;EPSG:4326&#39;</span>
+        <span class="n">wmc_4326</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">gpd</span><span class="o">.</span><span class="n">GeoSeries</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">wmc_</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">wmc_</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:2056&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">wmc_4326</span> <span class="o">=</span> <span class="p">[</span><span class="n">wmc_4326</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">wmc_4326</span><span class="o">.</span><span class="n">x</span><span class="p">]</span>  <span class="c1"># Flip lat and lon to match Folium format</span>
+
+        <span class="c1"># Create a GeoDataFrame for the points from act_</span>
+        <span class="n">geometry</span> <span class="o">=</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span> <span class="k">for</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">act_</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="n">act_</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">])]</span>
+        <span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span><span class="n">act_</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">geometry</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Find the main home coordinates</span>
+        <span class="n">find_home_geom</span> <span class="o">=</span> <span class="n">act_</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="n">act_</span><span class="o">.</span><span class="n">location_id</span> <span class="o">==</span> <span class="n">act_</span><span class="o">.</span><span class="n">home_location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;geometry&quot;</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">find_home_geom</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">home_loc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">find_home_geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">find_home_geom</span><span class="o">.</span><span class="n">y</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">find_home_geom</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">home_loc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">find_home_geom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">find_home_geom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="c1"># Create a GeoDataFrame for the home_loc</span>
+        <span class="n">home_loc_geometry</span> <span class="o">=</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="n">home_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">home_loc</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+        <span class="n">home_loc_gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+            <span class="n">geometry</span><span class="o">=</span><span class="n">home_loc_geometry</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:2056&quot;</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Create a GeoDataFrame for the ellipse</span>
+        <span class="c1"># Define the source and target coordinate reference systems (CRS)</span>
+        <span class="n">source_crs</span> <span class="o">=</span> <span class="s2">&quot;EPSG:2056&quot;</span>
+        <span class="n">target_crs</span> <span class="o">=</span> <span class="s2">&quot;EPSG:4326&quot;</span>
+        <span class="c1"># Create a PyProj transformer for the conversion</span>
+        <span class="n">transformer</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span>
+            <span class="n">source_crs</span><span class="p">,</span> <span class="n">target_crs</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Create Ellipse</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">action_space</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">user</span><span class="p">,</span> <span class="s2">&quot;ellipse_2056&quot;</span><span class="p">]</span>
+        <span class="n">ellipse_polygon</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">get_verts</span><span class="p">())</span>
+        <span class="n">ellipse_coords</span> <span class="o">=</span> <span class="p">[[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">ellipse_polygon</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">]</span>
+        <span class="c1"># Convert coordinates to EPSG:4326</span>
+        <span class="n">ellipse_coords_4326</span> <span class="o">=</span> <span class="p">[</span><span class="n">transformer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">ellipse_coords</span><span class="p">]</span>
+        <span class="n">ellipse_coords_4326_t</span> <span class="o">=</span> <span class="p">[[</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">ellipse_coords_4326</span><span class="p">]</span>
+        <span class="n">ellipse_gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+            <span class="n">geometry</span><span class="o">=</span><span class="p">[</span><span class="n">Polygon</span><span class="p">(</span><span class="n">ellipse_coords_4326</span><span class="p">)],</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Create a Folium map centered around the mean coordinates</span>
+        <span class="n">mean_lat</span><span class="p">,</span> <span class="n">mean_lon</span> <span class="o">=</span> <span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">map_center</span> <span class="o">=</span> <span class="p">[</span><span class="n">mean_lat</span><span class="p">,</span> <span class="n">mean_lon</span><span class="p">]</span>
+        <span class="n">mymap</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">Map</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="n">map_center</span><span class="p">,</span> <span class="n">zoom_start</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">control_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Add basemap using OpenStreetMap</span>
+        <span class="n">folium</span><span class="o">.</span><span class="n">TileLayer</span><span class="p">(</span><span class="s2">&quot;openstreetmap&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">mymap</span><span class="p">)</span>
+
+        <span class="c1"># Add Ellipse</span>
+        <span class="c1"># folium.Polygon(locations=ellipse.exterior.coords, color=&#39;#c9cfbc&#39;, fill=True, fill_color=&#39;#c9cfbc&#39;, fill_opacity=0.2).add_to(mymap)</span>
+        <span class="n">folium</span><span class="o">.</span><span class="n">GeoJson</span><span class="p">(</span>
+            <span class="n">ellipse_gdf</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;polygon&quot;</span><span class="p">,</span>
+            <span class="n">zoom_on_click</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">style_function</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span><span class="p">},</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">mymap</span><span class="p">)</span>
+
+        <span class="c1"># Add points from act_ with CircleMarkers</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">gdf</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="n">folium</span><span class="o">.</span><span class="n">CircleMarker</span><span class="p">(</span>
+                <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]],</span>
+                <span class="n">radius</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+                <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">fill_color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+                <span class="n">fill_opacity</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+                <span class="n">popup</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;user_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">mymap</span><span class="p">)</span>
+
+        <span class="c1"># Add wmc_ in green</span>
+        <span class="n">folium</span><span class="o">.</span><span class="n">CircleMarker</span><span class="p">(</span>
+            <span class="n">location</span><span class="o">=</span><span class="n">wmc_4326</span><span class="p">,</span>
+            <span class="n">radius</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">,</span>
+            <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">fill_color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">,</span>
+            <span class="n">fill_opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">popup</span><span class="o">=</span><span class="s2">&quot;Weighted mean ceter&quot;</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">mymap</span><span class="p">)</span>
+
+        <span class="c1"># Add home_loc from act_ with a customized icon</span>
+        <span class="n">folium</span><span class="o">.</span><span class="n">Marker</span><span class="p">(</span>
+            <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">home_loc_gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">home_loc_gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+            <span class="n">icon</span><span class="o">=</span><span class="n">folium</span><span class="o">.</span><span class="n">Icon</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;home&quot;</span><span class="p">),</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">mymap</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">save</span><span class="p">:</span>
+            <span class="n">mymap</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;action_space_folium_&quot;</span> <span class="o">+</span> <span class="n">user</span> <span class="o">+</span> <span class="s2">&quot;.html&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Display the map</span>
+        <span class="k">return</span> <span class="n">mymap</span></div>
+
+
+    <span class="c1"># def get_inno_rate_per_phase(</span>
+    <span class="c1">#     action_space,</span>
+    <span class="c1">#     multiday_graph,</span>
+    <span class="c1">#     user_id_,</span>
+    <span class="c1">#     col_digraph_motif=&quot;DiGraph_motif&quot;,</span>
+    <span class="c1">#     phase=None,</span>
+    <span class="c1">#     treatment=None,</span>
+    <span class="c1"># ):</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+    <span class="c1">#     Compute the innovation rate from motif</span>
+    <span class="c1">#     user_id: list of users to compute the innovation rate</span>
+    <span class="c1">#     mtf_useridday: df of DiGraph_motifs with user_id_days in index</span>
+    <span class="c1">#     &quot;&quot;&quot;</span>
+
+    <span class="c1">#     mtf_useridday = pd.merge(</span>
+    <span class="c1">#         multiday_graph[[&quot;DiGraph_motif&quot;, &quot;motif_flat&quot;]],</span>
+    <span class="c1">#         action_space,</span>
+    <span class="c1">#         left_index=True,</span>
+    <span class="c1">#         right_index=True,</span>
+    <span class="c1">#         how=&quot;left&quot;,</span>
+    <span class="c1">#     )</span>
+
+    <span class="c1">#     # df_innov_rate = pd.DataFrame(index=range(100),columns=user_id)</span>
+
+    <span class="c1">#     # isolate rows for phase X only</span>
+    <span class="c1">#     if phase != None:</span>
+    <span class="c1">#         mtf_useridday = mtf_useridday[mtf_useridday.phase == phase]</span>
+    <span class="c1">#     # isolate rows for treatment X only</span>
+    <span class="c1">#     if treatment != None:</span>
+    <span class="c1">#         mtf_useridday = mtf_useridday[mtf_useridday.treatment == treatment]</span>
+    <span class="c1">#     # resample for continuous days</span>
+    <span class="c1">#     graphs = (</span>
+    <span class="c1">#         mtf_useridday[mtf_useridday.user_id == user_id_]</span>
+    <span class="c1">#         .set_index(&quot;date&quot;)</span>
+    <span class="c1">#         .resample(&quot;D&quot;)</span>
+    <span class="c1">#         .ffill()</span>
+    <span class="c1">#     )</span>
+    <span class="c1">#     # read the first graph G0 for user_id</span>
+    <span class="c1">#     G0 = graphs[col_digraph_motif][0]</span>
+    <span class="c1">#     # init inno rate list</span>
+    <span class="c1">#     innovation_rate = []</span>
+    <span class="c1">#     # then compute the next graph and compare with G0</span>
+    <span class="c1">#     for G in graphs[col_digraph_motif][1:]:</span>
+    <span class="c1">#         innovation_rate.append(nx.compose(G0, G).number_of_nodes())</span>
+    <span class="c1">#         G0 = nx.compose(G0, G)</span>
+    <span class="c1">#     # x = np.arange(0, len(innovation_rate), 1).tolist()</span>
+    <span class="c1">#     # y = innovation_rate</span>
+
+    <span class="c1">#     return innovation_rate</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marc-Edouard Schultheiss.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

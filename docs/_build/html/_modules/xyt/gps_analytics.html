@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xyt.gps_analytics &mdash; xyt 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            xyt
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">xyt</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">xyt.gps_analytics</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for xyt.gps_analytics</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">DistanceMetric</span>
+<span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">DBSCAN</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">from</span> <span class="nn">pathos.multiprocessing</span> <span class="kn">import</span> <span class="n">ProcessingPool</span> <span class="k">as</span> <span class="n">Pool</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+
+<div class="viewcode-block" id="GPSAnalytics">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_analytics.GPSAnalytics">[docs]</a>
+<span class="k">class</span> <span class="nc">GPSAnalytics</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs analytics on GPS data, including splitting activities over midnight,</span>
+<span class="sd">    spatial clustering, deriving metrics, and computing daily statistics.</span>
+
+<span class="sd">    This class offers methods to manipulate GPS data stored in DataFrames. It provides</span>
+<span class="sd">    functionalities to split activities that span midnight into two, perform spatial</span>
+<span class="sd">    clustering using DBSCAN, derive various metrics related to trips and activities,</span>
+<span class="sd">    and compute daily descriptive statistics.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">&quot;display.max_columns&quot;</span><span class="p">,</span> <span class="mi">999</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expect_col_spt</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;activity_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;started_at&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;finished_at&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;purpose&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;lon&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;lat&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expect_col_leg</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;leg_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;started_at&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;finished_at&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;detected_mode&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;mode&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;geometry&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;next_activity_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;length&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;duration&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expect_col_ext_stp</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="c1"># &quot;leg_id&quot;,</span>
+            <span class="s2">&quot;started_at&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;finished_at&quot;</span><span class="p">,</span>
+            <span class="c1"># &quot;detected_mode&quot;,</span>
+            <span class="c1"># &quot;mode&quot;,</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+            <span class="c1"># &quot;geometry&quot;,</span>
+            <span class="c1"># &quot;next_activity_id&quot;,</span>
+            <span class="c1"># &quot;length&quot;,</span>
+            <span class="s2">&quot;duration&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cluster&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cluster_size&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cluster_info&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;location_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;peak&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;first_dep&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;last_arr&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;home_loop&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;daily_trip_dist&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;num_trip&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;max_dist&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;min_dist&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;max_dist_from_home&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dist_from_home&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;home_location_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;weekday&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+<div class="viewcode-block" id="GPSAnalytics.verify_columns">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_analytics.GPSAnalytics.verify_columns">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">verify_columns</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">expected_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Verifies if expected columns are present in the DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df: DataFrame to check columns in.</span>
+<span class="sd">            - expected_columns: List of expected column names.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">missing_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">expected_columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing_columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Columns missing in DataFrame: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GPSAnalytics.split_overnight">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_analytics.GPSAnalytics.split_overnight">[docs]</a>
+    <span class="k">def</span> <span class="nf">split_overnight</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">staypoint</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">time_columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;started_at&quot;</span><span class="p">,</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Splits activities going over midnight into two activities.</span>
+
+<span class="sd">        Description:</span>
+<span class="sd">            1. Split activities that go over midnight into two activities</span>
+<span class="sd">            2. Allocate the same geolocation and activity purpose to the splitted activity</span>
+<span class="sd">            3. Compute the duration of the splitted activities</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - staypoint: DataFrame containing activities to split. Columns: &#39;activity_id&#39;, &#39;started_at&#39;, &#39;finished_at&#39;, &#39;purpose&#39;, &#39;user_id&#39;, &#39;lon&#39;, &#39;lat&#39;</span>
+<span class="sd">            - time_columns: Columns for activity start and end times.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - DataFrame with split activities and new &#39;duration&#39; column.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verify_columns</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">staypoint</span><span class="p">,</span> <span class="n">expected_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">expect_col_spt</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">split_activity</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+            <span class="c1"># Check if the activity spans midnight</span>
+            <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="n">time_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">date</span><span class="p">()</span> <span class="o">!=</span> <span class="n">row</span><span class="p">[</span><span class="n">time_columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">date</span><span class="p">():</span>
+                <span class="c1"># Split the activity into two parts</span>
+                <span class="n">part1</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="n">part2</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+                <span class="n">part1</span><span class="p">[</span><span class="n">time_columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+                    <span class="n">part1</span><span class="p">[</span><span class="n">time_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; 23:59:59&quot;</span>
+                <span class="p">)</span>
+                <span class="n">part2</span><span class="p">[</span><span class="n">time_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+                    <span class="n">part2</span><span class="p">[</span><span class="n">time_columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; 00:00:01&quot;</span>
+                <span class="p">)</span>
+
+                <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">part1</span><span class="p">,</span> <span class="n">part2</span><span class="p">])</span>
+
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">row</span><span class="p">])</span>
+
+        <span class="c1"># Apply the split_activity function to each row and concatenate the result</span>
+        <span class="n">split_activities</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+            <span class="n">staypoint</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">split_activity</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Compute the duration in seconds</span>
+        <span class="n">split_activities</span><span class="p">[</span><span class="s2">&quot;duration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">split_activities</span><span class="p">[</span><span class="n">time_columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">-</span> <span class="n">split_activities</span><span class="p">[</span><span class="n">time_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span> <span class="o">/</span> <span class="mi">60</span>
+
+        <span class="k">return</span> <span class="n">split_activities</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_spatial_clustering</span><span class="p">(</span>
+        <span class="n">gdf</span><span class="p">,</span>
+        <span class="n">eps</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+        <span class="n">minpts</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="n">lon_lat_columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">],</span>
+        <span class="n">user_id_col</span><span class="o">=</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+        <span class="n">purpose_col</span><span class="o">=</span><span class="s2">&quot;imputed_purpose&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Performs Density-based spatial clustering (DBSCAN) on GeoDataFrame.</span>
+
+<span class="sd">        Desription:</span>
+<span class="sd">            1. Use the Density-based spatial clustering of applications with noise (DBSCAN) method to aggregate neighboring nodes</span>
+<span class="sd">            2. Label the clusters with -1 being noise, and 0, 1, ..., n the number of the cluster. NB. 0 is not necessarily the denser cluster</span>
+<span class="sd">            3. Aggregate the lon/lat to the mean of all nodes in a same cluster</span>
+<span class="sd">            4. NB. clustering done for a given user_id and a given imputed_purpose</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - gdf: GeoDataFrame with Lon/Lat nodes. Columns: Lon/Lat columns defined by &#39;lon_lat_columns&#39;, &#39;user_id&#39;, &#39;imputed_purpose&#39;</span>
+<span class="sd">            - eps: Maximum distance between samples.</span>
+<span class="sd">            - minpts: Number of nodes in a neighborhood.</span>
+<span class="sd">            - lon_lat_columns: Columns for longitude and latitude.</span>
+<span class="sd">            - user_id_col: Column name for user IDs.</span>
+<span class="sd">            - purpose_col: Column name for activity purpose.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - GeoDataFrame with clustered lon/lat and labels.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># parameterize DBSCAN</span>
+        <span class="n">eps_rad</span> <span class="o">=</span> <span class="n">eps</span> <span class="o">/</span> <span class="mf">3671000.0</span>  <span class="c1"># meters to radians</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">DBSCAN</span><span class="p">(</span>
+            <span class="n">eps</span><span class="o">=</span><span class="n">eps_rad</span><span class="p">,</span> <span class="n">min_samples</span><span class="o">=</span><span class="n">minpts</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;haversine&quot;</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;ball_tree&quot;</span>
+        <span class="p">)</span>
+        <span class="c1"># add a column for cluster labelling</span>
+        <span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;cluster&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;cluster_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="c1"># initialize the output DF</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+        <span class="c1"># NB run DBSCAN per user_id and per activity purpose</span>
+        <span class="k">for</span> <span class="n">user_id</span> <span class="ow">in</span> <span class="n">gdf</span><span class="p">[</span><span class="n">user_id_col</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">purpose</span> <span class="ow">in</span> <span class="n">gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">gdf</span><span class="p">[</span><span class="n">user_id_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">][</span><span class="n">purpose_col</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+                <span class="c1"># compute DBSCAN using straight-line haversine distances</span>
+                <span class="n">sub_gdf</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">sub_gdf</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">gdf</span><span class="p">[</span><span class="n">user_id_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">gdf</span><span class="p">[</span><span class="n">purpose_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">purpose</span><span class="p">)</span>
+                <span class="p">]</span>
+                <span class="n">sub_gdf</span> <span class="o">=</span> <span class="n">sub_gdf</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">sub_gdf</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="c1"># Perform DBSCAN clustering from features, and return cluster labels.</span>
+                <span class="n">cl</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">sub_gdf</span><span class="p">[[</span><span class="n">lon_lat_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">lon_lat_columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
+                <span class="p">)</span>
+
+                <span class="n">max_size</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">cl_size</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">cl</span><span class="p">):</span>
+                    <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">cl</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="s2">&quot;cluster&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cluster</span>
+                    <span class="k">if</span> <span class="n">cluster</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                        <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">cl</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">),</span> <span class="s2">&quot;cluster_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
+                            <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">cl</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">)]</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">cl</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">),</span> <span class="s2">&quot;cluster_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+                    <span class="k">if</span> <span class="n">cluster</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                        <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                            <span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">,</span> <span class="n">lon_lat_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="p">]</span> <span class="o">=</span> <span class="n">sub_gdf</span><span class="p">[</span><span class="n">lon_lat_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span>
+                            <span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster</span> <span class="o">==</span> <span class="n">cluster</span>
+                        <span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                        <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                            <span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">,</span> <span class="n">lon_lat_columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="p">]</span> <span class="o">=</span> <span class="n">sub_gdf</span><span class="p">[</span><span class="n">lon_lat_columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span>
+                            <span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster</span> <span class="o">==</span> <span class="n">cluster</span>
+                        <span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+                <span class="n">output</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">output</span><span class="p">,</span> <span class="n">sub_gdf</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">output</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_cluster_info</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">user_id_col</span><span class="o">=</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="n">purpose_col</span><span class="o">=</span><span class="s2">&quot;imputed_purpose&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes cluster labels and importance of visited places.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df: DataFrame with cluster labels. Columns: &#39;user_id&#39;, &#39;imputed_purpose&#39;, &#39;cluster&#39;, &#39;cluster_size&#39;</span>
+<span class="sd">            - threshold: Threshold for frequent/occasional visits.</span>
+<span class="sd">            - user_id_col: Column name for user IDs.</span>
+<span class="sd">            - purpose_col: Column name for activity purpose.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - DataFrame with labeled places.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;cluster_info&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">for</span> <span class="n">user_id</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[</span><span class="n">user_id_col</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">purpose</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="n">user_id_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">][</span><span class="n">purpose_col</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+                <span class="n">sub_gdf</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">user_id_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">purpose_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">purpose</span><span class="p">)</span>
+                <span class="p">]</span>
+                <span class="n">sub_gdf</span> <span class="o">=</span> <span class="n">sub_gdf</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">sub_gdf</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">max_size</span> <span class="o">=</span> <span class="n">sub_gdf</span><span class="p">[</span><span class="s2">&quot;cluster_size&quot;</span><span class="p">][</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+                <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;cluster_info&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Visited once&quot;</span>
+                <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster_size</span> <span class="o">==</span> <span class="n">max_size</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+                    <span class="s2">&quot;cluster_info&quot;</span><span class="p">,</span>
+                <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Most visited&quot;</span>
+                <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster_size</span> <span class="o">&gt;=</span> <span class="n">max_size</span> <span class="o">*</span> <span class="n">threshold</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster_info</span> <span class="o">!=</span> <span class="s2">&quot;Most visited&quot;</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+                    <span class="s2">&quot;cluster_info&quot;</span><span class="p">,</span>
+                <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Frequent visit&quot;</span>
+                <span class="n">sub_gdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster_size</span> <span class="o">&lt;</span> <span class="n">max_size</span> <span class="o">*</span> <span class="n">threshold</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster_info</span> <span class="o">!=</span> <span class="s2">&quot;Most visited&quot;</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">sub_gdf</span><span class="o">.</span><span class="n">cluster</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+                    <span class="s2">&quot;cluster_info&quot;</span><span class="p">,</span>
+                <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Occasional visit&quot;</span>
+
+                <span class="n">output</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">output</span><span class="p">,</span> <span class="n">sub_gdf</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+<div class="viewcode-block" id="GPSAnalytics.spatial_clustering">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_analytics.GPSAnalytics.spatial_clustering">[docs]</a>
+    <span class="k">def</span> <span class="nf">spatial_clustering</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">staypoint</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Aggregates locations of most visited places.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - staypoint: DataFrame containing activity locations. Columns: &#39;activity_id&#39;, &#39;started_at&#39;, &#39;finished_at&#39;, &#39;purpose&#39;, &#39;user_id&#39;, &#39;lon&#39;, &#39;lat&#39;</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - DataFrame with clustered locations and labels.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verify_columns</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">staypoint</span><span class="p">,</span> <span class="n">expected_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">expect_col_spt</span><span class="p">)</span>
+
+        <span class="n">new_spt</span> <span class="o">=</span> <span class="n">staypoint</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Aggregate the locations of most visited places per user_id and per imputed_purpose</span>
+        <span class="n">new_spt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spatial_clustering</span><span class="p">(</span><span class="n">new_spt</span><span class="p">,</span> <span class="n">purpose_col</span><span class="o">=</span><span class="s2">&quot;purpose&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Label the Most Visited Places</span>
+        <span class="n">new_spt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cluster_info</span><span class="p">(</span><span class="n">new_spt</span><span class="p">,</span> <span class="n">purpose_col</span><span class="o">=</span><span class="s2">&quot;purpose&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Aggregate the 100m-neighbooring lon,lat pairs</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">DBSCAN</span><span class="p">(</span>
+            <span class="n">eps</span><span class="o">=</span><span class="mi">100</span> <span class="o">/</span> <span class="mi">3671000</span><span class="p">,</span> <span class="n">min_samples</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;haversine&quot;</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;ball_tree&quot;</span>
+        <span class="p">)</span>
+        <span class="n">cl</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">new_spt</span><span class="p">[[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">]]))</span>
+        <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">cl</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">cluster</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">new_spt</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">cl</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_spt</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">cl</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                <span class="n">new_spt</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">cl</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_spt</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">cl</span> <span class="o">==</span> <span class="n">cluster</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="c1"># Add location id for unique lon,lat pairs</span>
+        <span class="n">new_spt</span><span class="p">[</span><span class="s2">&quot;location_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">for</span> <span class="n">counter</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="n">new_spt</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">],</span> <span class="n">as_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">size</span><span class="p">()[[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">]]</span>
+            <span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">new_spt</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">new_spt</span><span class="o">.</span><span class="n">lon</span> <span class="o">==</span> <span class="n">lon</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">new_spt</span><span class="o">.</span><span class="n">lat</span> <span class="o">==</span> <span class="n">lat</span><span class="p">),</span> <span class="s2">&quot;location_id&quot;</span>
+            <span class="p">]</span> <span class="o">=</span> <span class="n">counter</span>
+        <span class="k">return</span> <span class="n">new_spt</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_get_distance</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span> <span class="n">od_matrix</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate distance between two geographical coordinates.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - lon1: Longitude of the first point.</span>
+<span class="sd">            - lat1: Latitude of the first point.</span>
+<span class="sd">            - lon2: Longitude of the second point.</span>
+<span class="sd">            - lat2: Latitude of the second point.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - Distance between the points (in kilometers).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span> <span class="ow">or</span> <span class="n">math</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">destination</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">od_matrix</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">origin</span><span class="p">,</span> <span class="n">destination</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1000</span>
+        <span class="k">return</span> <span class="n">output</span>
+
+<div class="viewcode-block" id="GPSAnalytics.get_metrics">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_analytics.GPSAnalytics.get_metrics">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">staypoint</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">leg</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes additional variables and metrics.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - staypoint: DataFrame with activity data. Columns: &#39;activity_id&#39;, &#39;started_at&#39;, &#39;finished_at&#39;, &#39;purpose&#39;, &#39;user_id&#39;, &#39;lon&#39;, &#39;lat&#39;</span>
+<span class="sd">            - leg: DataFrame with leg data. Columns: &#39;leg_id&#39;, &#39;started_at&#39;, &#39;finished_at&#39;, &#39;detected_mode&#39;, &#39;mode&#39;, &#39;user_id&#39;, &#39;geometry&#39;, &#39;next_activity_id&#39;, &#39;length&#39;, &#39;duration&#39;</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - DataFrame with computed metrics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verify_columns</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">staypoint</span><span class="p">,</span> <span class="n">expected_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">expect_col_spt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verify_columns</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">leg</span><span class="p">,</span> <span class="n">expected_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">expect_col_leg</span><span class="p">)</span>
+        <span class="c1"># Derive additional variables</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">staypoint</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># DAILY USER_ID: Add user_ids per day</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span>
+            <span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span>
+            <span class="n">df</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span>
+            <span class="o">+</span> <span class="s2">&quot;_&quot;</span>
+            <span class="o">+</span> <span class="n">df</span><span class="o">.</span><span class="n">started_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">year</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="o">+</span> <span class="n">df</span><span class="o">.</span><span class="n">started_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="o">+</span> <span class="n">df</span><span class="o">.</span><span class="n">started_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">day</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="c1"># PEAK HOURS: Add boolean if trip starts (i.e. activity ends) in peak hour</span>
+        <span class="n">morning</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+            <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">]</span>
+        <span class="n">noon</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+            <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">]</span>
+        <span class="n">evening</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+            <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="p">]</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;peak&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&gt;</span> <span class="n">morning</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&lt;</span> <span class="n">morning</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="s2">&quot;peak&quot;</span><span class="p">,</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;morning_peak&quot;</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&gt;</span> <span class="n">noon</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&lt;</span> <span class="n">noon</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="s2">&quot;peak&quot;</span><span class="p">,</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;noon_peak&quot;</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&gt;</span> <span class="n">evening</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&lt;</span> <span class="n">evening</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="s2">&quot;peak&quot;</span><span class="p">,</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;evening_peak&quot;</span>
+        <span class="c1"># Get the time of first departure / last arrival</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;first_dep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;last_arr&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;home_loop&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;daily_trip_dist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;num_trip&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;max_dist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;min_dist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;max_dist_from_home&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;dist_from_home&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;home_location_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="n">location</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">staypoint</span><span class="p">[[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;location_id&quot;</span><span class="p">]]</span>
+            <span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">&quot;location_id&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">location</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">od_matrix_kms</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">DistanceMetric</span><span class="o">.</span><span class="n">get_metric</span><span class="p">(</span><span class="s2">&quot;haversine&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pairwise</span><span class="p">(</span>
+                <span class="n">location</span><span class="p">[[</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="o">*</span> <span class="mi">6373</span><span class="p">,</span>
+            <span class="n">columns</span><span class="o">=</span><span class="n">location</span><span class="o">.</span><span class="n">location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span>
+            <span class="n">index</span><span class="o">=</span><span class="n">location</span><span class="o">.</span><span class="n">location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># RUN PARRALEL FUNCTIONS FUNC0. FUNC1 &amp; FUNC2</span>
+        <span class="c1"># BE CAREFUL THIS PART CAN BE LONG</span>
+        <span class="c1"># MAKE A PROGRESS BAR ?</span>
+
+        <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;purpose&quot;</span><span class="p">:</span> <span class="s2">&quot;imputed_purpose&quot;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_func1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func3</span><span class="p">]:</span>
+            <span class="n">cores</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+            <span class="c1"># split the df in as many array as the machine has cores</span>
+            <span class="n">user_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array_split</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">unique</span><span class="p">(),</span> <span class="n">cores</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">df_split</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">user_ids</span><span class="p">:</span>
+                <span class="n">df_split</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">tolist</span><span class="p">())])</span>
+            <span class="c1"># create the multiprocessing pool</span>
+            <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span>
+            <span class="c1"># process the DataFrame by mapping function to each df across the pool</span>
+            <span class="k">if</span> <span class="n">func</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func2</span><span class="p">:</span>
+                <span class="n">func2_partial</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_func2</span><span class="p">,</span> <span class="n">leg</span><span class="o">=</span><span class="n">leg</span><span class="p">)</span>
+                <span class="n">df_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">func2_partial</span><span class="p">,</span> <span class="n">df_split</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">func</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func3</span><span class="p">:</span>
+                <span class="n">func3_partial</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_func3</span><span class="p">,</span> <span class="n">od_matrix_kms</span><span class="o">=</span><span class="n">od_matrix_kms</span><span class="p">)</span>
+                <span class="n">df_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">func3_partial</span><span class="p">,</span> <span class="n">df_split</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">df_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">df_split</span><span class="p">))</span>
+
+            <span class="c1"># return the df</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">df_out</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+
+            <span class="c1"># close down the pool and join</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">func</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func2</span><span class="p">:</span>
+                <span class="c1"># drop the days with only one obesrvation and small connection duration</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span>
+                    <span class="n">df</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">first_dep</span><span class="o">.</span><span class="n">isna</span><span class="p">())</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">duration</span> <span class="o">&lt;</span> <span class="mi">43200</span><span class="p">)]</span><span class="o">.</span><span class="n">index</span><span class="p">,</span>
+                    <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>  <span class="c1"># 43200sec is 12 hours</span>
+                <span class="c1"># Add weekdays</span>
+                <span class="n">df</span><span class="p">[</span><span class="s2">&quot;weekday&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">started_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">weekday</span>
+                <span class="c1"># SORT VALUES</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span>
+                    <span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span> <span class="s2">&quot;started_at&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span>
+                <span class="n">df</span><span class="p">[</span><span class="s2">&quot;cluster_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;cluster_size&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">func</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func3</span><span class="p">:</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;dist_from_home&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_distance</span><span class="p">(</span>
+                        <span class="n">row</span><span class="p">[</span><span class="s2">&quot;location_id&quot;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;home_location_id&quot;</span><span class="p">],</span> <span class="n">od_matrix_kms</span>
+                    <span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_func1</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">datetime</span>
+        <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+        <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+        <span class="c1">## Clean up the first / last activity of the day</span>
+        <span class="c1"># CASE 1. Manage cases where the first/last act is at home but started sometime in the morning/afternoon --&gt; set started_at == 00:00:01 / finished_at == 23:59:59</span>
+        <span class="c1"># Set a df with only the first/last activities of user-days (NB DO NOT RESET OR IGNORE INDEXES):</span>
+        <span class="n">first_act</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">last_act</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;last&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="n">case1f</span> <span class="o">=</span> <span class="n">first_act</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">first_act</span><span class="o">.</span><span class="n">started_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&gt;</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">first_act</span><span class="o">.</span><span class="n">started_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&lt;</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">first_act</span><span class="o">.</span><span class="n">imputed_purpose</span> <span class="o">==</span> <span class="s2">&quot;Home&quot;</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">case1l</span> <span class="o">=</span> <span class="n">last_act</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">last_act</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&gt;</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">last_act</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">&lt;</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">23</span><span class="p">,</span> <span class="mi">59</span><span class="p">,</span> <span class="mi">59</span><span class="p">))</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">last_act</span><span class="o">.</span><span class="n">imputed_purpose</span> <span class="o">==</span> <span class="s2">&quot;Home&quot;</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">case1f</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;started_at&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">case1f</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;started_at&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;T00:00:01Z&quot;</span><span class="p">,</span>
+            <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%SZ&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">case1l</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">case1l</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;T23:59:59Z&quot;</span><span class="p">,</span>
+            <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%SZ&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># Recalculate the durations</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">case1l</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">case1f</span><span class="o">.</span><span class="n">index</span><span class="p">),</span> <span class="s2">&quot;duration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">case1l</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">case1f</span><span class="o">.</span><span class="n">index</span><span class="p">),</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">]</span>
+            <span class="o">-</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">case1l</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">case1f</span><span class="o">.</span><span class="n">index</span><span class="p">),</span> <span class="s2">&quot;started_at&quot;</span><span class="p">]</span>
+        <span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">timedelta64</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;s&quot;</span><span class="p">)</span>
+
+        <span class="c1"># CASE 2. Drop all the user_id_day for wich the first / last activity does not starts / ends at 00:00:01 / 23:59:59</span>
+        <span class="n">len_before</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="c1"># Set a df with only the first/last activities of user-days (NB DO NOT RESET OR IGNORE INDEXES):</span>
+        <span class="n">first_act</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">last_act</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;last&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Clean the user_id_day with home only</span>
+        <span class="n">index_to_drop</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">user_id</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;location_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">==</span> <span class="mi">1</span>
+                <span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+                    <span class="s2">&quot;Home&quot;</span>
+                    <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;imputed_purpose&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+                <span class="p">):</span>
+                    <span class="n">index_to_drop</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">)]</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                    <span class="p">)</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;duration&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;duration&quot;</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;started_at&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;started_at&quot;</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;finished_at&quot;</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">continue</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">index_to_drop</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span>
+                <span class="o">~</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span>
+                    <span class="n">first_act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="n">first_act</span><span class="o">.</span><span class="n">started_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">!=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                        <span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">array</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span>
+                <span class="o">~</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span>
+                    <span class="n">last_act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="n">last_act</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span> <span class="o">!=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">23</span><span class="p">,</span> <span class="mi">59</span><span class="p">,</span> <span class="mi">59</span><span class="p">),</span>
+                        <span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">array</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+        <span class="c1"># len_after = len(df)</span>
+        <span class="c1"># print(&#39;Warning: clean up operation reduced the df lenght by -&#39; + str(&quot;{:.1f}&quot;.format((len_before-len_after)*100/len_before)) + &#39; %&#39;)</span>
+        <span class="c1">##Most user-days start at home:</span>
+        <span class="c1"># print(&#39;But note that there are still some weird cases like a day starting with Shopping. Those cases are however very few :&#39; + &quot;\n&quot; + df.drop_duplicates(subset=[&#39;user_id_day&#39;], keep=&#39;first&#39;).groupby(by=&#39;imputed_purpose&#39;).count()[&#39;user_id_day&#39;].to_string())</span>
+
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_func2</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">leg</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">datetime</span>
+        <span class="kn">import</span> <span class="nn">geopandas</span>
+
+        <span class="c1"># Compute miscellaneous additional variables</span>
+        <span class="k">for</span> <span class="n">user_id</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">)])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;first_dep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;finished_at&quot;</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;last_arr&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;started_at&quot;</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="nb">sum</span><span class="p">(</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;imputed_purpose&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span>
+                            <span class="p">[</span><span class="s2">&quot;Home&quot;</span><span class="p">,</span> <span class="s2">&quot;home&quot;</span><span class="p">]</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="o">&gt;</span> <span class="mi">1</span>
+                <span class="p">):</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;home_loop&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="nb">sum</span><span class="p">(</span>
+                            <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;imputed_purpose&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span>
+                                <span class="p">[</span><span class="s2">&quot;Home&quot;</span><span class="p">,</span> <span class="s2">&quot;home&quot;</span><span class="p">]</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+                        <span class="o">-</span> <span class="mi">1</span>
+                    <span class="p">)</span>
+                <span class="c1"># find from legs the actual trip distance</span>
+                <span class="n">date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span>
+                    <span class="n">user_id</span><span class="p">[</span><span class="o">-</span><span class="mi">8</span><span class="p">:],</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>  <span class="c1"># retrieve the date of the concerned activities from the user_id_day string</span>
+                <span class="n">condition1</span> <span class="o">=</span> <span class="n">leg</span><span class="o">.</span><span class="n">next_activity_id</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;activity_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="p">)</span>  <span class="c1"># spot all the legs tracked to reach the activities</span>
+                <span class="n">condition2</span> <span class="o">=</span> <span class="n">leg</span><span class="o">.</span><span class="n">started_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span> <span class="o">==</span> <span class="n">date</span>  <span class="c1"># match the dates</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;daily_trip_dist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">leg</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">condition1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">condition2</span><span class="p">),</span> <span class="s2">&quot;length&quot;</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                <span class="c1"># return the number of trips between activities</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">),</span> <span class="s2">&quot;num_trip&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_func3</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">od_matrix_kms</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">DistanceMetric</span>
+        <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+        <span class="kn">import</span> <span class="nn">math</span>
+
+        <span class="c1"># Compute the distances between locations</span>
+        <span class="k">for</span> <span class="n">user_id</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Compute max/min distance between all activity locations</span>
+                <span class="n">od_pairs</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">]</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">od_dist</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">DistanceMetric</span><span class="o">.</span><span class="n">get_metric</span><span class="p">(</span><span class="s2">&quot;haversine&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">pairwise</span><span class="p">(</span>
+                        <span class="n">od_pairs</span><span class="p">[[</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+                    <span class="p">)</span>
+                    <span class="o">*</span> <span class="mi">6373</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">od_dist</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;max_dist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">od_dist</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
+                    <span class="p">)</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;min_dist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">od_dist</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">od_dist</span><span class="p">)]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
+                    <span class="p">)</span>  <span class="c1"># get the min among non-null values</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;max_dist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;min_dist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="c1"># Compute max distance from home</span>
+                <span class="n">home_locations</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">)</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">imputed_purpose</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;home&quot;</span><span class="p">),</span>
+                    <span class="p">[</span><span class="s2">&quot;location_id&quot;</span><span class="p">,</span> <span class="s2">&quot;cluster_size&quot;</span><span class="p">],</span>
+                <span class="p">]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">home_locations</span><span class="o">.</span><span class="n">location_id</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">home_id</span> <span class="o">=</span> <span class="n">home_locations</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="n">home_locations</span><span class="o">.</span><span class="n">cluster_size</span><span class="o">.</span><span class="n">idxmax</span><span class="p">(),</span> <span class="s2">&quot;location_id&quot;</span>
+                    <span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">home_id</span> <span class="o">=</span> <span class="n">home_locations</span><span class="o">.</span><span class="n">location_id</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">home_id</span><span class="p">)</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="n">all_id</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">location_id</span> <span class="o">!=</span> <span class="n">home_id</span><span class="p">),</span>
+                        <span class="s2">&quot;location_id&quot;</span><span class="p">,</span>
+                    <span class="p">]</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;max_dist_from_home&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">od_matrix_kms</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                            <span class="n">od_matrix_kms</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">all_id</span><span class="p">),</span> <span class="n">home_id</span>
+                        <span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+                        <span class="o">*</span> <span class="mi">1000</span>
+                    <span class="p">)</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">user_id_day</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;home_location_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">home_id</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+        <span class="k">return</span> <span class="n">df</span>
+
+<div class="viewcode-block" id="GPSAnalytics.get_daily_metrics">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_analytics.GPSAnalytics.get_daily_metrics">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_daily_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext_staypoint</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructs a matrix of daily descriptive statistics.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - ext_staypoint: DataFrame with relevant columns. Columns: &#39;started_at&#39;, &#39;finished_at&#39;, &#39;user_id&#39;, &#39;duration&#39;, &#39;cluster&#39;, &#39;cluster_size&#39;, &#39;cluster_info&#39;, &#39;location_id&#39;, &#39;peak&#39;, &#39;first_dep&#39;, &#39;last_arr&#39;, &#39;home_loop&#39;, &#39;daily_trip_dist&#39;, &#39;num_trip&#39;, &#39;max_dist&#39;, &#39;min_dist&#39;, &#39;max_dist_from_home&#39;, &#39;dist_from_home&#39;, &#39;home_location_id&#39;, &#39;weekday&#39;</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - DataFrame with computed daily profiles.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">verify_columns</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">ext_staypoint</span><span class="p">,</span> <span class="n">expected_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">expect_col_ext_stp</span><span class="p">)</span>
+        <span class="c1"># Select relevant columns</span>
+        <span class="n">daily_act</span> <span class="o">=</span> <span class="n">ext_staypoint</span><span class="p">[</span>
+            <span class="p">[</span>
+                <span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;first_dep&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;last_arr&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;home_loop&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;daily_trip_dist&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;peak&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;num_trip&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;max_dist_from_home&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;weekday&quot;</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Convert &#39;first_dep&#39; and &#39;last_arr&#39; to minutes since midnight</span>
+        <span class="n">daily_act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">daily_act</span><span class="o">.</span><span class="n">first_dep</span><span class="o">.</span><span class="n">notnull</span><span class="p">(),</span> <span class="s2">&quot;first_dep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+                    <span class="n">daily_act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">daily_act</span><span class="o">.</span><span class="n">first_dep</span><span class="o">.</span><span class="n">notnull</span><span class="p">(),</span> <span class="s2">&quot;first_dep&quot;</span><span class="p">],</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;%H:%M:%S&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;1900-01-01&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">div</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">daily_act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">daily_act</span><span class="o">.</span><span class="n">last_arr</span><span class="o">.</span><span class="n">notnull</span><span class="p">(),</span> <span class="s2">&quot;last_arr&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+                    <span class="n">daily_act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">daily_act</span><span class="o">.</span><span class="n">last_arr</span><span class="o">.</span><span class="n">notnull</span><span class="p">(),</span> <span class="s2">&quot;last_arr&quot;</span><span class="p">],</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;%H:%M:%S&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;1900-01-01&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">div</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Remove duplicate rows based on &#39;user_id_day&#39;</span>
+        <span class="n">daily_act</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span>
+            <span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Create new columns &#39;am_peak&#39;, &#39;pm_peak&#39;, and &#39;noon_peak&#39;</span>
+        <span class="n">daily_act</span><span class="p">[</span><span class="s2">&quot;am_peak&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">daily_act</span><span class="p">[</span><span class="s2">&quot;pm_peak&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">daily_act</span><span class="p">[</span><span class="s2">&quot;noon_peak&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">daily_act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">daily_act</span><span class="o">.</span><span class="n">peak</span> <span class="o">==</span> <span class="s2">&quot;morning_peak&quot;</span><span class="p">,</span> <span class="s2">&quot;am_peak&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">daily_act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">daily_act</span><span class="o">.</span><span class="n">peak</span> <span class="o">==</span> <span class="s2">&quot;evening_peak&quot;</span><span class="p">,</span> <span class="s2">&quot;pm_peak&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">daily_act</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">daily_act</span><span class="o">.</span><span class="n">peak</span> <span class="o">==</span> <span class="s2">&quot;noon_peak&quot;</span><span class="p">,</span> <span class="s2">&quot;noon_peak&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Drop the &#39;peak&#39; column</span>
+        <span class="n">daily_act</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;peak&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Set &#39;user_id_day&#39; as the index</span>
+        <span class="n">daily_act</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;user_id_day&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">daily_act</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marc-Edouard Schultheiss.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

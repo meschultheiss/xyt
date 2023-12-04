@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xyt"
+version = "0.1.0"
+dependencies = [
+    'numpy',
+    'pandas',
+    'folium',
+    'streamlit-folium',
+    'faker',
+    'shapely',
+    'geopandas',
+    'geopy',
+    'numba',
+    'more_itertools',
+    'scikit-fuzzy',
+    'haversine',
+    'scikit-learn',
+    'ipython',
+    'pathos',
+    'osmnx',
+    'gif',
+    'utm',
+    'plotly',
+    'seaborn',
+    'pointpats',
+    'pysal',
+    'contextily'
+]
+requires-python = ">=3.8"
+authors = [
+  {name = "Marc-Edouard Schultheiss <meschultheiss@gmail.com>"},
+]
+maintainers = [
+  {name = "Marc-Edouard Schultheiss <meschultheiss@gmail.com>"}
+]
+description = "xyt is a python package for processing raw gps data into mobility data. xyt offers privacy-based capabilities and aims to provide a plug-and-play pipeline to leverage gps data."
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+keywords = ["xyt", "gps", "mobility"]
+classifiers = [
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent',
+]

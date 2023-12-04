@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xyt.gps_data_processor &mdash; xyt 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            xyt
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">xyt</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">xyt.gps_data_processor</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for xyt.gps_data_processor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">LineString</span>
+<span class="kn">import</span> <span class="nn">geopy.distance</span>
+<span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">DBSCAN</span>
+<span class="kn">import</span> <span class="nn">more_itertools</span> <span class="k">as</span> <span class="nn">mit</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+<span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">njit</span>
+<span class="kn">import</span> <span class="nn">skfuzzy</span> <span class="k">as</span> <span class="nn">fuzz</span>
+<span class="kn">from</span> <span class="nn">pandas.api.types</span> <span class="kn">import</span> <span class="n">CategoricalDtype</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">from</span> <span class="nn">haversine</span> <span class="kn">import</span> <span class="n">haversine</span><span class="p">,</span> <span class="n">Unit</span>
+<span class="kn">from</span> <span class="nn">dateutil.parser</span> <span class="kn">import</span> <span class="n">isoparse</span>
+<span class="kn">import</span> <span class="nn">folium</span>
+<span class="kn">from</span> <span class="nn">folium</span> <span class="kn">import</span> <span class="n">plugins</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">geopandas</span> <span class="k">as</span> <span class="nn">gpd</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">Point</span><span class="p">,</span> <span class="n">LineString</span><span class="p">,</span> <span class="n">MultiPoint</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">radians</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sqrt</span><span class="p">,</span> <span class="n">atan2</span>
+
+
+<div class="viewcode-block" id="GPSDataProcessor">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor">[docs]</a>
+<span class="k">class</span> <span class="nc">GPSDataProcessor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    GPSDataProcessor is a class designed for processing GPS data, including mode detection and leg unification.</span>
+
+<span class="sd">    This class provides methods for detecting user activities and modes of transportation in GPS data, as well as</span>
+<span class="sd">    unifying individual legs and activities into meaningful segments.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        - speed_th (float): A threshold for detecting walks based on speed.</span>
+<span class="sd">        - acceleration_th (float): A threshold for detecting walks based on acceleration.</span>
+<span class="sd">        - minimal_walking_duration (float): Minimum duration required to classify a segment as a walk.</span>
+<span class="sd">        - minimal_trip_duration (float): Minimum duration required for a trip.</span>
+<span class="sd">        - use_multiprocessing (bool): Flag indicating whether to use multiple processes for parallel processing.</span>
+
+<span class="sd">    Example Usage:</span>
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            # Initialize GPSDataProcessor with custom Args</span>
+<span class="sd">            processor = GPSDataProcessor(speed_th=1.5, acceleration_th=0.5, minimal_walking_duration=300, minimal_trip_duration=600, use_multiprocessing=True)</span>
+
+<span class="sd">            poi_waypoints = data_processor.guess_home_work(waypoints, cell_size=0.3)</span>
+<span class="sd">            smoothed_df = data_processor.smooth(poi_waypoints, sigma=100)</span>
+<span class="sd">            segmented_df = data_processor.segment(smoothed_df)</span>
+<span class="sd">            mode_df = data_processor.mode_detection(segmented_df)</span>
+<span class="sd">            legs = data_processor.get_legs(df = mode_df)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">radius</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">min_samples</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">time_gap</span><span class="o">=</span><span class="mi">850</span><span class="p">,</span>
+        <span class="n">speed_th</span><span class="o">=</span><span class="mf">2.78</span><span class="p">,</span>
+        <span class="n">acceleration_th</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">minimal_walking_duration</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">minimal_trip_duration</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span>
+        <span class="n">use_multiprocessing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">radius</span>
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_samples</span> <span class="o">=</span> <span class="n">min_samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_gap</span> <span class="o">=</span> <span class="n">time_gap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_multiprocessing</span> <span class="o">=</span> <span class="n">use_multiprocessing</span>
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">speed_th</span> <span class="o">=</span> <span class="n">speed_th</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acceleration_th</span> <span class="o">=</span> <span class="n">acceleration_th</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minimal_walking_duration</span> <span class="o">=</span> <span class="n">minimal_walking_duration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minimal_trip_duration</span> <span class="o">=</span> <span class="n">minimal_trip_duration</span>
+
+    <span class="c1">########HOME WORK DETECTION</span>
+<div class="viewcode-block" id="GPSDataProcessor.assign_cell">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.assign_cell">[docs]</a>
+    <span class="k">def</span> <span class="nf">assign_cell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assign a cell number to a GPS point based on latitude and longitude.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - latitude (float): Latitude of the GPS point.</span>
+<span class="sd">            - longitude (float): Longitude of the GPS point.</span>
+<span class="sd">            - cell_size (float): Size of the grid cell.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - int: Cell number for the GPS point.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">km_east</span> <span class="o">=</span> <span class="mf">111.320</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">latitude</span><span class="p">))</span> <span class="o">*</span> <span class="n">longitude</span>
+        <span class="n">km_north</span> <span class="o">=</span> <span class="mf">110.574</span> <span class="o">*</span> <span class="n">latitude</span>
+        <span class="n">x_index</span> <span class="o">=</span> <span class="n">km_east</span> <span class="o">//</span> <span class="n">cell_size</span>
+        <span class="n">y_index</span> <span class="o">=</span> <span class="n">km_north</span> <span class="o">//</span> <span class="n">cell_size</span>
+        <span class="n">cell_number</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_index</span> <span class="o">+</span> <span class="n">x_index</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_index</span> <span class="o">+</span> <span class="n">x_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">x_index</span>
+        <span class="k">return</span> <span class="n">cell_number</span></div>
+
+
+<div class="viewcode-block" id="GPSDataProcessor.process_gps_data">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.process_gps_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">process_gps_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">waypoints</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Process GPS data to detect home and work locations for users.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - waypoints (pandas.DataFrame): DataFrame with GPS waypoints.</span>
+<span class="sd">            - cell_size (float): Size of the grid cell.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - dict: A dictionary containing user IDs as keys and their detected home and work locations as values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">home_work_locations</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">user_id</span> <span class="ow">in</span> <span class="n">waypoints</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+            <span class="n">user_waypoints</span> <span class="o">=</span> <span class="n">waypoints</span><span class="p">[</span><span class="n">waypoints</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">user_waypoints</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">user_waypoints_</span> <span class="o">=</span> <span class="n">user_waypoints</span><span class="p">[</span>
+                    <span class="p">[</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">]</span>
+                <span class="p">]</span>
+
+                <span class="k">if</span> <span class="n">user_waypoints_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">user_waypoints_</span><span class="p">[</span><span class="s2">&quot;cell_number&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assign_cell</span><span class="p">(</span>
+                        <span class="n">user_waypoints_</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">user_waypoints_</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">cell_size</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">user_waypoints_</span><span class="p">[</span><span class="s2">&quot;cell_number&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">user_waypoints_</span><span class="p">[</span>
+                        <span class="s2">&quot;cell_number&quot;</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int64&quot;</span><span class="p">)</span>
+
+                    <span class="c1"># Filter waypoints for workdays between 7:00 and 19:00</span>
+                    <span class="n">user_workdates</span> <span class="o">=</span> <span class="n">user_waypoints_</span><span class="p">[</span>
+                        <span class="p">(</span><span class="n">user_waypoints_</span><span class="p">[</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&gt;=</span> <span class="mi">7</span><span class="p">)</span>
+                        <span class="o">&amp;</span> <span class="p">(</span><span class="n">user_waypoints_</span><span class="p">[</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&lt;=</span> <span class="mi">19</span><span class="p">)</span>
+                        <span class="o">&amp;</span> <span class="p">(</span><span class="n">user_waypoints_</span><span class="p">[</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">weekday</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">)</span>
+                    <span class="p">]</span>
+
+                    <span class="c1"># Calculate the most visited cells during workdays and overall for this user</span>
+                    <span class="n">most_visited_cells_workdates</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">user_workdates</span><span class="p">[[</span><span class="s2">&quot;cell_number&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">]]</span>
+                        <span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;cell_number&quot;</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">agg</span><span class="p">([</span><span class="s2">&quot;count&quot;</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">])</span>
+                    <span class="p">)</span>
+                    <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">droplevel</span><span class="p">()</span>
+                    <span class="p">)</span>
+                    <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="s2">&quot;count&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;mean_lat&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;count_lon&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;mean_lon&quot;</span><span class="p">,</span>
+                    <span class="p">]</span>
+                    <span class="k">del</span> <span class="n">most_visited_cells_workdates</span><span class="p">[</span><span class="s2">&quot;count_lon&quot;</span><span class="p">]</span>
+                    <span class="n">most_visited_cells_workdates</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+                    <span class="p">)</span>
+                    <span class="n">most_visited_cells_workdates</span> <span class="o">=</span> <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+                        <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;mean_lat&quot;</span><span class="p">:</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;mean_lon&quot;</span><span class="p">:</span> <span class="s2">&quot;longitude&quot;</span><span class="p">}</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">&quot;count&quot;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+                    <span class="n">home_user</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;latitude&quot;</span><span class="p">],</span>
+                        <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;longitude&quot;</span><span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="n">first_workdates</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;latitude&quot;</span><span class="p">],</span>
+                        <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;longitude&quot;</span><span class="p">],</span>
+                    <span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">second_workdates</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;latitude&quot;</span><span class="p">],</span>
+                            <span class="n">most_visited_cells_workdates</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;longitude&quot;</span><span class="p">],</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">second_workdates</span> <span class="o">=</span> <span class="kc">None</span>
+
+                    <span class="n">work_user</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">first_workdates</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="n">first_workdates</span> <span class="o">!=</span> <span class="n">home_user</span><span class="p">)</span>
+                        <span class="k">else</span> <span class="n">second_workdates</span>
+                    <span class="p">)</span>
+
+                    <span class="n">home_work_locations</span><span class="p">[</span><span class="n">user_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;Home_location&quot;</span><span class="p">:</span> <span class="n">home_user</span><span class="p">,</span>
+                        <span class="s2">&quot;Work_location&quot;</span><span class="p">:</span> <span class="n">work_user</span><span class="p">,</span>
+                    <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">home_work_locations</span></div>
+
+
+<div class="viewcode-block" id="GPSDataProcessor.guess_home_work">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.guess_home_work">[docs]</a>
+    <span class="k">def</span> <span class="nf">guess_home_work</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">waypoints</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Guess and assign home and work locations to waypoints based on processed GPS data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - waypoints (pandas.DataFrame): DataFrame with GPS waypoints.</span>
+<span class="sd">            - cell_size (float): Size of the grid cell.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with &#39;home_loc&#39; and &#39;work_loc&#39; columns added.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">home_work_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_gps_data</span><span class="p">(</span><span class="n">waypoints</span><span class="p">,</span> <span class="n">cell_size</span><span class="p">)</span>
+        <span class="n">waypoints_</span> <span class="o">=</span> <span class="n">waypoints</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">waypoints_</span><span class="p">[</span><span class="s2">&quot;home_loc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">waypoints_</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">Point</span><span class="p">(</span><span class="n">home_work_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Home_location&quot;</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="n">waypoints_</span><span class="p">[</span><span class="s2">&quot;work_loc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">waypoints_</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">Point</span><span class="p">(</span><span class="n">home_work_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Work_location&quot;</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">waypoints_</span></div>
+
+
+    <span class="c1">########SMOOTHING SECTION</span>
+
+<div class="viewcode-block" id="GPSDataProcessor.smooth">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.smooth">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">smooth</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">,</span> <span class="n">accuracy_threshold</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">smoothing_method</span><span class="o">=</span><span class="s2">&quot;time&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clean and preprocess a raw GPS points DataFrame using smoothing techniques.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): DataFrame with GPS points to be preprocessed.</span>
+<span class="sd">            - accuracy_threshold (int, optional): Accuracy threshold for filtering. Defaults to 100.</span>
+<span class="sd">            - sigma (int, optional): Sigma for Gaussian smoothing, defines the size of the smoothing window. Defaults to 10.</span>
+<span class="sd">            - smoothing_method (str, optional): Smoothing method (&#39;time&#39; or &#39;space&#39;). Defaults to &#39;time&#39;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: Cleaned and preprocessed DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">processor</span> <span class="o">=</span> <span class="n">GPSDataProcessor</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">processor</span><span class="o">.</span><span class="n">_prepare</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">accuracy_threshold</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">smoothing_method</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_prepare</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">accuracy_threshold</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">smoothing_method</span><span class="o">=</span><span class="s2">&quot;time&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Internal method to prepare the DataFrame based on accuracy and smoothing method.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): The raw GPS points DataFrame.</span>
+<span class="sd">            - accuracy_threshold (int, optional): Accuracy threshold for filtering. Defaults to 100.</span>
+<span class="sd">            - sigma (int, optional): Sigma for Gaussian smoothing, defines the size of the smoothing window. Defaults to 10.</span>
+<span class="sd">            - smoothing_method (str, optional): Smoothing method (&#39;time&#39; or &#39;space&#39;). Defaults to &#39;time&#39;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: Cleaned and preprocessed DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">unique_user_ids</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+        <span class="n">cleaned_and_smoothed_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">user_id</span> <span class="ow">in</span> <span class="n">unique_user_ids</span><span class="p">:</span>
+            <span class="n">user_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">]</span>  <span class="c1"># Subsample by user_id</span>
+            <span class="k">if</span> <span class="s2">&quot;accuracy&quot;</span> <span class="ow">in</span> <span class="n">user_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">user_df</span> <span class="o">=</span> <span class="n">user_df</span><span class="p">[</span><span class="n">user_df</span><span class="o">.</span><span class="n">accuracy</span> <span class="o">&lt;</span> <span class="n">accuracy_threshold</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">smoothing_method</span> <span class="o">==</span> <span class="s2">&quot;time&quot;</span><span class="p">:</span>
+                <span class="n">user_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_time_based_smoothing</span><span class="p">(</span><span class="n">user_df</span><span class="p">,</span> <span class="n">sigma</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">smoothing_method</span> <span class="o">==</span> <span class="s2">&quot;space&quot;</span><span class="p">:</span>
+                <span class="n">user_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_space_based_smoothing</span><span class="p">(</span><span class="n">user_df</span><span class="p">,</span> <span class="n">sigma</span><span class="p">)</span>
+
+            <span class="n">cleaned_and_smoothed_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">cleaned_and_smoothed_df</span><span class="p">,</span> <span class="n">user_df</span><span class="p">])</span>
+
+        <span class="n">cleaned_and_smoothed_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cleaned_and_smoothed_df</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_time_based_smoothing</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply time-based Gaussian smoothing on a DataFrame of GPS waypoints.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): DataFrame with points to be smoothed.</span>
+<span class="sd">            - sigma (float): Smoothing parameter.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: The smoothed DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span>  <span class="c1"># Return the input DataFrame if it&#39;s empty</span>
+
+        <span class="n">size</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Check if the data size is less than the smoothing window size</span>
+        <span class="k">if</span> <span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">6</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">output</span>  <span class="c1"># Return the input DataFrame without smoothing</span>
+
+        <span class="n">output</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">])</span>
+        <span class="n">output</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">])</span>
+
+        <span class="n">timestamps</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int64&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span><span class="o">**</span><span class="mi">9</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int64&quot;</span><span class="p">)</span>
+        <span class="n">timestamps</span> <span class="o">=</span> <span class="n">timestamps</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">longitudes</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">latitudes</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="n">output_longitudes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">output_latitudes</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">sigma_squared</span> <span class="o">=</span> <span class="n">sigma</span><span class="o">**</span><span class="mi">2</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">):</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">5</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">5</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">6</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">6</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">)</span> <span class="k">else</span> <span class="n">size</span>
+
+            <span class="n">timestamp_df</span> <span class="o">=</span> <span class="n">timestamps</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+            <span class="n">window_longitudes</span> <span class="o">=</span> <span class="n">longitudes</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+            <span class="n">window_latitudes</span> <span class="o">=</span> <span class="n">latitudes</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+            <span class="n">center_timestamp</span> <span class="o">=</span> <span class="n">timestamps</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">timestamp_df</span> <span class="o">-</span> <span class="n">center_timestamp</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">weights</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">weights</span> <span class="o">/</span> <span class="n">sigma_squared</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span><span class="p">),</span> <span class="n">weights</span><span class="p">)))</span>
+            <span class="n">sum_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+
+            <span class="n">new_longitude</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span> <span class="o">*</span> <span class="n">window_longitudes</span><span class="p">)</span> <span class="o">/</span> <span class="n">sum_weights</span>
+            <span class="n">new_latitude</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span> <span class="o">*</span> <span class="n">window_latitudes</span><span class="p">)</span> <span class="o">/</span> <span class="n">sum_weights</span>
+
+            <span class="n">output_longitudes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_longitude</span><span class="p">)</span>
+            <span class="n">output_latitudes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_latitude</span><span class="p">)</span>
+
+        <span class="n">output_longitudes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">output_longitudes</span><span class="p">)</span>
+        <span class="n">output_latitudes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">output_latitudes</span><span class="p">)</span>
+
+        <span class="n">output</span><span class="o">.</span><span class="n">longitude</span> <span class="o">=</span> <span class="n">output_longitudes</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">latitude</span> <span class="o">=</span> <span class="n">output_latitudes</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">_space_based_smoothing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply space-based Gaussian smoothing on a DataFrame of GPS waypoints.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): DataFrame with points to be smoothed.</span>
+<span class="sd">            - sigma (float): Smoothing parameter.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: The smoothed DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">extract_coordinates</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">gaussian_smoothing</span><span class="p">(</span><span class="n">coords</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">coords</span>
+
+            <span class="n">smoothed_coords</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">):</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">2</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span> <span class="o">-</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">size</span>
+
+                <span class="n">window</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">window</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="n">p3</span> <span class="o">=</span> <span class="n">window</span>
+                    <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span> <span class="o">=</span> <span class="n">p1</span>
+                    <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span> <span class="o">=</span> <span class="n">p2</span>
+                    <span class="n">x3</span><span class="p">,</span> <span class="n">y3</span> <span class="o">=</span> <span class="n">p3</span>
+
+                    <span class="n">new_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">x3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">6</span>
+                    <span class="n">new_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">y1</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">y2</span> <span class="o">+</span> <span class="n">y3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">6</span>
+
+                    <span class="n">smoothed_coords</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">new_x</span><span class="p">,</span> <span class="n">new_y</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">smoothed_coords</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+            <span class="k">return</span> <span class="n">LineString</span><span class="p">(</span><span class="n">smoothed_coords</span><span class="p">)</span>
+
+    <span class="c1">########SEGMENTING SECTION</span>
+
+<div class="viewcode-block" id="GPSDataProcessor.haversine_distance">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.haversine_distance">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">haversine_distance</span><span class="p">(</span><span class="n">lat1</span><span class="p">,</span> <span class="n">lon1</span><span class="p">,</span> <span class="n">lat2</span><span class="p">,</span> <span class="n">lon2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the Haversine distance between two GPS coordinates.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - lat1 (float): Latitude of the first point.</span>
+<span class="sd">            - lon1 (float): Longitude of the first point.</span>
+<span class="sd">            - lat2 (float): Latitude of the second point.</span>
+<span class="sd">            - lon2 (float): Longitude of the second point.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - float: Haversine distance in meters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Convert latitude and longitude from degrees to radians</span>
+        <span class="n">lat1</span><span class="p">,</span> <span class="n">lon1</span><span class="p">,</span> <span class="n">lat2</span><span class="p">,</span> <span class="n">lon2</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">radians</span><span class="p">,</span> <span class="p">[</span><span class="n">lat1</span><span class="p">,</span> <span class="n">lon1</span><span class="p">,</span> <span class="n">lat2</span><span class="p">,</span> <span class="n">lon2</span><span class="p">])</span>
+
+        <span class="c1"># Haversine formula</span>
+        <span class="n">dlon</span> <span class="o">=</span> <span class="n">lon2</span> <span class="o">-</span> <span class="n">lon1</span>
+        <span class="n">dlat</span> <span class="o">=</span> <span class="n">lat2</span> <span class="o">-</span> <span class="n">lat1</span>
+
+        <span class="n">a</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">dlat</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">cos</span><span class="p">(</span><span class="n">lat1</span><span class="p">)</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">lat2</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">dlon</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">atan2</span><span class="p">(</span><span class="n">sqrt</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">a</span><span class="p">))</span>
+
+        <span class="c1"># Radius of the Earth in meters (approximately)</span>
+        <span class="n">radius_</span> <span class="o">=</span> <span class="mi">6371000</span>  <span class="c1"># meters</span>
+
+        <span class="c1"># Calculate the distance in meters</span>
+        <span class="n">distance</span> <span class="o">=</span> <span class="n">radius_</span> <span class="o">*</span> <span class="n">c</span>
+        <span class="k">return</span> <span class="n">distance</span></div>
+
+
+<div class="viewcode-block" id="GPSDataProcessor.create_route">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.create_route">[docs]</a>
+    <span class="k">def</span> <span class="nf">create_route</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate additional statistics such as distance, time delta, speed, and acceleration for GPS waypoints.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): The waypoints DataFrame to be processed.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: Waypoints DataFrame with additional statistics.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                <span class="n">columns</span><span class="o">=</span><span class="p">[</span>
+                    <span class="s2">&quot;tracked_at_start&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;latitude_start&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;longitude_start&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;tracked_at_end&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;latitude_end&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;longitude_end&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;distance_meters&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;time_delta&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;speed&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;acceleration&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;detection&quot;</span><span class="p">,</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(),</span>
+            <span class="n">on</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">,</span>
+            <span class="n">suffixes</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;_start&quot;</span><span class="p">,</span> <span class="s2">&quot;_end&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span>
+                <span class="s2">&quot;index&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;user_id_end&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;accuracy_start&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;accuracy_end&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;type_end&quot;</span><span class="p">,</span>
+            <span class="p">],</span>
+            <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;user_id_start&quot;</span><span class="p">:</span> <span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="s2">&quot;type_start&quot;</span><span class="p">:</span> <span class="s2">&quot;type&quot;</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;distance_meters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="n">GPSDataProcessor</span><span class="o">.</span><span class="n">haversine_distance</span><span class="p">(</span>
+                <span class="n">row</span><span class="p">[</span><span class="s2">&quot;latitude_start&quot;</span><span class="p">],</span>
+                <span class="n">row</span><span class="p">[</span><span class="s2">&quot;longitude_start&quot;</span><span class="p">],</span>
+                <span class="n">row</span><span class="p">[</span><span class="s2">&quot;latitude_end&quot;</span><span class="p">],</span>
+                <span class="n">row</span><span class="p">[</span><span class="s2">&quot;longitude_end&quot;</span><span class="p">],</span>
+            <span class="p">),</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">tracked_at_end</span> <span class="o">-</span> <span class="n">res</span><span class="o">.</span><span class="n">tracked_at_start</span>
+        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span>
+        <span class="p">)</span>  <span class="c1"># in seconds</span>
+        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;speed&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;distance_meters&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span>
+        <span class="c1"># This will be necessary for mode detection</span>
+        <span class="n">res</span><span class="p">[</span><span class="s2">&quot;acceleration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;speed&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+
+<div class="viewcode-block" id="GPSDataProcessor.prepare_for_detection">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.prepare_for_detection">[docs]</a>
+    <span class="k">def</span> <span class="nf">prepare_for_detection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Flag detections as trips by default.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): Waypoints DataFrame to be flagged.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with &#39;detection&#39; column set to &#39;trip&#39;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;trip&quot;</span>
+        <span class="k">return</span> <span class="n">df</span></div>
+
+
+<div class="viewcode-block" id="GPSDataProcessor.activities_density">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.activities_density">[docs]</a>
+    <span class="k">def</span> <span class="nf">activities_density</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Detect activities by density.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - args (tuple): A tuple containing the waypoints DataFrame and a clusterer object.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with updated &#39;detection&#39; column.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span><span class="p">,</span> <span class="n">clusterer</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">clusters_start</span> <span class="o">=</span> <span class="n">clusterer</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">df</span><span class="p">[[</span><span class="s2">&quot;latitude_start&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude_start&quot;</span><span class="p">]])</span>
+        <span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># Create a copy of the DataFrame</span>
+
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s2">&quot;cluster_start&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">clusters_start</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;cluster_end&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">cluster_start</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;int&quot;</span><span class="p">)</span>
+
+        <span class="c1"># update the detection column: Whenever the clusters column are different, we put trip in detection. Otherwise, we put activity.</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;trip&quot;</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;cluster_start&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;cluster_end&quot;</span><span class="p">])</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;cluster_start&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+            <span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">],</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;activity&quot;</span>
+
+        <span class="k">return</span> <span class="n">df</span></div>
+
+
+<div class="viewcode-block" id="GPSDataProcessor.correct_clusters">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.correct_clusters">[docs]</a>
+    <span class="k">def</span> <span class="nf">correct_clusters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Correct detected clusters by merging them based on time and speed.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): DataFrame with &#39;detection&#39;, &#39;speed&#39;, and &#39;time_delta&#39; columns.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">activity_indexes</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">detection</span> <span class="o">==</span> <span class="s2">&quot;activity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">trip_indexes</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">detection</span> <span class="o">==</span> <span class="s2">&quot;trip&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="n">time_delta</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">speed</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;speed&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="n">detection</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">mit</span><span class="o">.</span><span class="n">consecutive_groups</span><span class="p">(</span><span class="n">activity_indexes</span><span class="p">):</span>
+            <span class="n">indexes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="n">window_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">time_delta</span><span class="p">[</span><span class="n">indexes</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">window_time</span> <span class="o">&lt;</span> <span class="mi">120</span><span class="p">:</span>
+                <span class="n">detection</span><span class="p">[</span><span class="n">indexes</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;trip&quot;</span>
+
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">mit</span><span class="o">.</span><span class="n">consecutive_groups</span><span class="p">(</span><span class="n">trip_indexes</span><span class="p">):</span>
+            <span class="n">indexes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="n">window_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">time_delta</span><span class="p">[</span><span class="n">indexes</span><span class="p">])</span>
+            <span class="n">mean_speed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">speed</span><span class="p">[</span><span class="n">indexes</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">window_time</span> <span class="o">&lt;</span> <span class="mi">120</span> <span class="ow">or</span> <span class="n">mean_speed</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">detection</span><span class="p">[</span><span class="n">indexes</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;activity&quot;</span>
+
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">detection</span></div>
+
+
+<div class="viewcode-block" id="GPSDataProcessor.segment_per_user">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.segment_per_user">[docs]</a>
+    <span class="k">def</span> <span class="nf">segment_per_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find clusters of waypoints for a specific user.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): Waypoints DataFrame to be processed.</span>
+<span class="sd">            - user_id (int or str): The user_id for which to perform segmentation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with the segment starts and ends for the specified user.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Filter the DataFrame for the specific user_id</span>
+        <span class="n">user_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">]</span>
+
+        <span class="n">route_clusters_detected</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>  <span class="c1"># Initialize an empty DataFrame</span>
+        <span class="n">route_user</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_route</span><span class="p">(</span><span class="n">user_df</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepare_for_detection</span><span class="p">(</span><span class="n">route_user</span><span class="p">)</span>
+
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;day&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">tracked_at_start</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">day</span><span class="p">)</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;month&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">tracked_at_start</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">month</span><span class="p">)</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;year&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">tracked_at_start</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+        <span class="n">db</span> <span class="o">=</span> <span class="n">DBSCAN</span><span class="p">(</span>
+            <span class="n">eps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">/</span> <span class="mf">6371.0</span><span class="p">,</span>
+            <span class="n">min_samples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_samples</span><span class="p">,</span>
+            <span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;ball_tree&quot;</span><span class="p">,</span>
+            <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;haversine&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">route_clusters_detected</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">([</span><span class="s2">&quot;cluster_start&quot;</span><span class="p">,</span> <span class="s2">&quot;cluster_end&quot;</span><span class="p">])</span>
+        <span class="p">)</span>
+
+        <span class="n">arguments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">&quot;day&quot;</span><span class="p">,</span> <span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="s2">&quot;year&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="n">arguments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])],</span> <span class="n">db</span><span class="p">),</span> <span class="n">arguments</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_multiprocessing</span><span class="p">:</span>
+            <span class="n">pool</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">activities_density</span><span class="p">,</span> <span class="n">arguments</span><span class="p">)</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">route_clusters_detected</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">route_clusters_detected</span><span class="p">,</span> <span class="n">res</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">argument_list</span> <span class="ow">in</span> <span class="n">arguments</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activities_density</span><span class="p">(</span><span class="n">argument_list</span><span class="p">)</span>
+                <span class="n">route_clusters_detected</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">route_clusters_detected</span><span class="p">,</span> <span class="n">res</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span>
+
+        <span class="n">route_clusters_detected</span> <span class="o">=</span> <span class="n">route_clusters_detected</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span>
+            <span class="n">by</span><span class="o">=</span><span class="s2">&quot;tracked_at_start&quot;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="n">route_clusters_detected</span> <span class="o">=</span> <span class="n">route_clusters_detected</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;day&quot;</span><span class="p">,</span> <span class="s2">&quot;month&quot;</span><span class="p">,</span> <span class="s2">&quot;year&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">route_clusters_detected</span> <span class="o">=</span> <span class="n">route_clusters_detected</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="s2">&quot;index&quot;</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">correct_clusters</span><span class="p">(</span><span class="n">route_clusters_detected</span><span class="p">)</span>
+
+        <span class="n">route_clusters_detected</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">route_clusters_detected</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span>
+                <span class="n">route_clusters_detected</span><span class="p">[</span>
+                    <span class="n">route_clusters_detected</span><span class="o">.</span><span class="n">time_delta</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_gap</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">index</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">route_clusters_detected</span> <span class="o">=</span> <span class="n">route_clusters_detected</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span>
+                <span class="s2">&quot;cluster_start&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;cluster_end&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;type_end&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;home_loc_end&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;work_loc_end&quot;</span><span class="p">,</span>
+            <span class="p">],</span>
+            <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">route_clusters_detected</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;user_id_start&quot;</span><span class="p">:</span> <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;type_start&quot;</span><span class="p">:</span> <span class="s2">&quot;type&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;home_loc_start&quot;</span><span class="p">:</span> <span class="s2">&quot;home_loc&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;work_loc_start&quot;</span><span class="p">:</span> <span class="s2">&quot;work_loc&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">route_clusters_detected</span></div>
+
+
+<div class="viewcode-block" id="GPSDataProcessor.segment">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.segment">[docs]</a>
+    <span class="k">def</span> <span class="nf">segment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Segment waypoints for all unique user_ids in the DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): Waypoints DataFrame with user_ids.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with the segment starts and ends for all users.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">unique_user_ids</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+        <span class="n">result_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">user_id</span> <span class="ow">in</span> <span class="n">unique_user_ids</span><span class="p">:</span>
+            <span class="n">user_segmentation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">segment_per_user</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
+            <span class="n">result_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">result_df</span><span class="p">,</span> <span class="n">user_segmentation</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result_df</span></div>
+
+
+    <span class="c1">##########MODE DETECTION SECTION</span>
+
+    <span class="k">def</span> <span class="nf">_detect_walks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Tags the DataFrame at given indexes with &#39;walk&#39; in the &#39;detection&#39; column for the points corresponding to walks.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - args (tuple): A tuple containing the DataFrame `df`, `walk_speed_th`, `walk_acceleration_th`, `minimal_walk_duration`, and `minimal_trip_duration`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with &#39;walk&#39; tags in the &#39;detection&#39; column.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span>
+            <span class="n">df</span><span class="p">,</span>
+            <span class="n">walk_speed_th</span><span class="p">,</span>
+            <span class="n">walk_acceleration_th</span><span class="p">,</span>
+            <span class="n">minimal_walk_duration</span><span class="p">,</span>
+            <span class="n">minimal_trip_duration</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">window</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">window_time</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">window_speed_median</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">window_acceleration_median</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+            <span class="n">condition_on_current_elem</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;speed&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">walk_speed_th</span>
+                <span class="ow">and</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;acceleration&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">walk_acceleration_th</span>
+            <span class="p">)</span>
+            <span class="n">condition_on_existing_window</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">window_speed_median</span> <span class="o">&lt;=</span> <span class="n">walk_speed_th</span>
+                <span class="ow">and</span> <span class="n">window_acceleration_median</span> <span class="o">&lt;=</span> <span class="n">walk_acceleration_th</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">condition_on_current_elem</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">condition_on_existing_window</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">window</span><span class="p">)</span> <span class="ow">and</span> <span class="n">window_time</span> <span class="o">&gt;=</span> <span class="n">minimal_walk_duration</span><span class="p">:</span>
+                    <span class="c1"># Update walk status</span>
+                    <span class="n">trip_before_time</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span> <span class="p">:</span> <span class="n">window</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+                    <span class="n">trip_after_time</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">window</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:][</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+                    <span class="n">elements_before</span> <span class="o">=</span> <span class="n">window</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">elements_after</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-</span> <span class="n">window</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+
+                    <span class="k">if</span> <span class="n">elements_before</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">elements_after</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">window</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="s2">&quot;detection&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;walk&quot;</span>
+                    <span class="k">elif</span> <span class="p">(</span>
+                        <span class="n">elements_before</span> <span class="o">==</span> <span class="mi">0</span>
+                        <span class="ow">and</span> <span class="n">trip_after_time</span> <span class="o">&gt;=</span> <span class="n">minimal_trip_duration</span>
+                    <span class="p">):</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">window</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="s2">&quot;detection&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;walk&quot;</span>
+                    <span class="k">elif</span> <span class="p">(</span>
+                        <span class="n">elements_after</span> <span class="o">==</span> <span class="mi">0</span>
+                        <span class="ow">and</span> <span class="n">trip_before_time</span> <span class="o">&gt;=</span> <span class="n">minimal_trip_duration</span>
+                    <span class="p">):</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">window</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="s2">&quot;detection&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;walk&quot;</span>
+                    <span class="k">elif</span> <span class="p">(</span>
+                        <span class="n">trip_before_time</span> <span class="o">&gt;=</span> <span class="n">minimal_trip_duration</span>
+                        <span class="ow">and</span> <span class="n">trip_after_time</span> <span class="o">&gt;=</span> <span class="n">minimal_trip_duration</span>
+                    <span class="p">):</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">window</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">get_loc</span><span class="p">(</span><span class="s2">&quot;detection&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="s2">&quot;walk&quot;</span>
+
+                    <span class="n">i</span> <span class="o">=</span> <span class="n">window</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+                    <span class="n">window</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">window_time</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">window_speed_median</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">window_acceleration_median</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">window</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">window_time</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">window_speed_median</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">window_acceleration_median</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">window</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="n">window_time</span> <span class="o">+=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span>
+                <span class="n">window_speed_median</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">window</span><span class="p">]</span><span class="o">.</span><span class="n">speed</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+                <span class="n">window_acceleration_median</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">window</span><span class="p">]</span><span class="o">.</span><span class="n">acceleration</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="k">def</span> <span class="nf">_detect_modes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Detects all modes except for walks using the fuzzy engine.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): DataFrame to be processed.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: The modified DataFrame with estimated modes in the &#39;estimated_mode&#39; column.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">med_speed_verylow</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">med_speed_low</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
+        <span class="n">med_speed_medium</span> <span class="o">=</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">15</span><span class="p">]</span>
+        <span class="n">med_speed_high</span> <span class="o">=</span> <span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">]</span>
+
+        <span class="n">acc95_low</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">]</span>
+        <span class="n">acc95_medium</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">]</span>
+        <span class="n">acc95_high</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">]</span>
+
+        <span class="n">speed95_low</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">]</span>
+        <span class="n">speed95_medium</span> <span class="o">=</span> <span class="p">[</span><span class="mf">7.5</span><span class="p">,</span> <span class="mf">9.5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">18</span><span class="p">]</span>
+        <span class="n">speed95_high</span> <span class="o">=</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">]</span>
+
+        <span class="n">possible_modes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">median_speed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;speed&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="n">acc_95per</span><span class="p">,</span> <span class="n">speed_95per</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;acceleration&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="mi">95</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;speed&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="mi">95</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">medspeed_verylow_bool</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_verylow</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="p">)</span>
+        <span class="n">medspeed_low_bool</span> <span class="o">=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_low</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="n">medspeed_medium_bool</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_medium</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="p">)</span>
+        <span class="n">medspeed_high_bool</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_high</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="p">)</span>
+
+        <span class="n">acc95_low_bool</span> <span class="o">=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">acc_95per</span><span class="p">]),</span> <span class="n">acc95_low</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="n">acc95_medium_bool</span> <span class="o">=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">acc_95per</span><span class="p">]),</span> <span class="n">acc95_medium</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="n">acc95_high_bool</span> <span class="o">=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">acc_95per</span><span class="p">]),</span> <span class="n">acc95_high</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+        <span class="n">speed95_low_bool</span> <span class="o">=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">speed_95per</span><span class="p">]),</span> <span class="n">speed95_low</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="n">speed95_medium_bool</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">speed_95per</span><span class="p">]),</span> <span class="n">speed95_medium</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="p">)</span>
+        <span class="n">speed95_high_bool</span> <span class="o">=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">speed_95per</span><span class="p">]),</span> <span class="n">speed95_high</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+        <span class="c1"># The paper suggests to take the minimum between the membership values.</span>
+        <span class="c1"># We need to treat all cases where we have a non empty intersection</span>
+        <span class="k">if</span> <span class="n">medspeed_verylow_bool</span> <span class="ow">and</span> <span class="n">medspeed_low_bool</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_verylow</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="o">&lt;=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_low</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">medspeed_low_bool</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">medspeed_verylow_bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">medspeed_low_bool</span> <span class="ow">and</span> <span class="n">medspeed_medium_bool</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_low</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="o">&lt;=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_medium</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">medspeed_medium_bool</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">medspeed_low_bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">medspeed_medium_bool</span> <span class="ow">and</span> <span class="n">medspeed_high_bool</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_medium</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="o">&lt;=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">median_speed</span><span class="p">]),</span> <span class="n">med_speed_high</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">medspeed_high_bool</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">medspeed_medium_bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">acc95_low_bool</span> <span class="ow">and</span> <span class="n">acc95_medium_bool</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">acc_95per</span><span class="p">]),</span> <span class="n">acc95_low</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="o">&lt;=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">acc_95per</span><span class="p">]),</span> <span class="n">acc95_medium</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">acc95_medium_bool</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">acc95_low_bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">acc95_medium_bool</span> <span class="ow">and</span> <span class="n">acc95_high_bool</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">acc_95per</span><span class="p">]),</span> <span class="n">acc95_medium</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="o">&lt;=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">acc_95per</span><span class="p">]),</span> <span class="n">acc95_high</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">acc95_high_bool</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">acc95_medium_bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">speed95_low_bool</span> <span class="ow">and</span> <span class="n">speed95_medium_bool</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">speed_95per</span><span class="p">]),</span> <span class="n">speed95_low</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="o">&lt;=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">speed_95per</span><span class="p">]),</span> <span class="n">speed95_medium</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">speed95_medium_bool</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">speed95_low_bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">speed95_medium_bool</span> <span class="ow">and</span> <span class="n">speed95_high_bool</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">speed_95per</span><span class="p">]),</span> <span class="n">speed95_medium</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="o">&lt;=</span> <span class="n">fuzz</span><span class="o">.</span><span class="n">trapmf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">speed_95per</span><span class="p">]),</span> <span class="n">speed95_high</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">):</span>
+                <span class="n">speed95_high_bool</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">speed95_medium_bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">medspeed_verylow_bool</span> <span class="ow">and</span> <span class="n">acc95_low_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Walk&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_verylow_bool</span> <span class="ow">and</span> <span class="n">acc95_medium_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Cycle&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_verylow_bool</span> <span class="ow">and</span> <span class="n">acc95_high_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Cycle&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">medspeed_low_bool</span> <span class="ow">and</span> <span class="n">acc95_low_bool</span> <span class="ow">and</span> <span class="n">speed95_low_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Cycle&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_low_bool</span> <span class="ow">and</span> <span class="n">acc95_low_bool</span> <span class="ow">and</span> <span class="n">speed95_medium_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Urban&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_low_bool</span> <span class="ow">and</span> <span class="n">acc95_low_bool</span> <span class="ow">and</span> <span class="n">speed95_high_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Car&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_low_bool</span> <span class="ow">and</span> <span class="n">acc95_medium_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Urban&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_low_bool</span> <span class="ow">and</span> <span class="n">acc95_high_bool</span> <span class="ow">and</span> <span class="n">speed95_low_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Urban&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_low_bool</span> <span class="ow">and</span> <span class="n">acc95_high_bool</span> <span class="ow">and</span> <span class="n">speed95_medium_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Car&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_low_bool</span> <span class="ow">and</span> <span class="n">acc95_high_bool</span> <span class="ow">and</span> <span class="n">speed95_high_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Car&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">medspeed_medium_bool</span> <span class="ow">and</span> <span class="n">acc95_low_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Urban&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_medium_bool</span> <span class="ow">and</span> <span class="n">acc95_medium_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Car&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_medium_bool</span> <span class="ow">and</span> <span class="n">acc95_high_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Car&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">medspeed_high_bool</span> <span class="ow">and</span> <span class="n">acc95_low_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Rail&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_high_bool</span> <span class="ow">and</span> <span class="n">acc95_medium_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Car&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">medspeed_high_bool</span> <span class="ow">and</span> <span class="n">acc95_high_bool</span><span class="p">:</span>
+            <span class="n">possible_modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Car&quot;</span><span class="p">)</span>
+
+        <span class="c1"># df[&#39;estimated_mode&#39;] = &quot;,&quot;.join(possible_modes)</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s2">&quot;estimated_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">possible_modes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span>
+
+<div class="viewcode-block" id="GPSDataProcessor.mode_detection">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.mode_detection">[docs]</a>
+    <span class="k">def</span> <span class="nf">mode_detection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform mode detection on a DataFrame, including walk detection and other modes using fuzzy logic.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): DataFrame with GPS data.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with modes and walk tags in the &#39;estimated_mode&#39; and &#39;detection&#39; columns.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;estimated_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">user_trips</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">detection</span> <span class="o">==</span> <span class="s2">&quot;trip&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="n">arguments</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mit</span><span class="o">.</span><span class="n">consecutive_groups</span><span class="p">(</span><span class="n">user_trips</span><span class="p">)]</span>
+        <span class="n">arguments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">map</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">x</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">speed_th</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">acceleration_th</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">minimal_walking_duration</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">minimal_trip_duration</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">arguments</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_multiprocessing</span><span class="p">:</span>
+            <span class="n">pool</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_detect_walks</span><span class="p">,</span> <span class="n">arguments</span><span class="p">)</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">res</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">argument_list</span> <span class="ow">in</span> <span class="n">arguments</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_detect_walks</span><span class="p">(</span><span class="n">argument_list</span><span class="p">)</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">res</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+
+        <span class="n">user_trips</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">detection</span> <span class="o">==</span> <span class="s2">&quot;trip&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="n">arguments</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mit</span><span class="o">.</span><span class="n">consecutive_groups</span><span class="p">(</span><span class="n">user_trips</span><span class="p">)]</span>
+        <span class="n">arguments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">x</span><span class="p">]),</span> <span class="n">arguments</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_multiprocessing</span><span class="p">:</span>
+            <span class="n">pool</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map_async</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_detect_modes</span><span class="p">,</span> <span class="n">arguments</span><span class="p">)</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">res</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">argument_list</span> <span class="ow">in</span> <span class="n">arguments</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_detect_modes</span><span class="p">(</span><span class="n">argument_list</span><span class="p">)</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">res</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">detection</span> <span class="o">==</span> <span class="s2">&quot;walk&quot;</span><span class="p">,</span> <span class="s2">&quot;estimated_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Walk&quot;</span>
+
+        <span class="k">return</span> <span class="n">df</span></div>
+
+
+    <span class="c1">##########LEG UNIFICATION SECTION</span>
+
+<div class="viewcode-block" id="GPSDataProcessor.get_legs">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_processor.GPSDataProcessor.get_legs">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_legs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract legs and activities from a DataFrame and aggregate the data for each leg or activity.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): DataFrame with GPS data, including &#39;detection&#39;, &#39;user_id&#39;, and &#39;type&#39; columns.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with aggregated legs and activities.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create a new grouping key based on consecutive values in the &#39;detection&#39; column, &#39;user_id&#39;, and &#39;type&#39;</span>
+        <span class="n">group_key</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">())</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">())</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">())</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
+
+        <span class="c1"># Define custom aggregation functions for activity and trip</span>
+        <span class="k">def</span> <span class="nf">aggregate_activity</span><span class="p">(</span><span class="n">group</span><span class="p">):</span>
+            <span class="n">first_start</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;tracked_at_start&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">last_end</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;tracked_at_end&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="c1"># Calculate the centroid of the activity points</span>
+            <span class="n">lon</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;longitude_start&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">lat</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;latitude_start&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+            <span class="c1"># Calculate the duration of the activity</span>
+            <span class="n">duration</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">last_end</span><span class="p">)</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">first_start</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="s2">&quot;tracked_at_start&quot;</span><span class="p">:</span> <span class="n">first_start</span><span class="p">,</span>
+                    <span class="s2">&quot;tracked_at_end&quot;</span><span class="p">:</span> <span class="n">last_end</span><span class="p">,</span>
+                    <span class="s2">&quot;duration&quot;</span><span class="p">:</span> <span class="n">duration</span><span class="p">,</span>
+                    <span class="s2">&quot;detection&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="s2">&quot;longitude_start&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span>
+                    <span class="s2">&quot;latitude_start&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
+                    <span class="s2">&quot;longitude_end&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span>
+                    <span class="s2">&quot;latitude_end&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
+                    <span class="s2">&quot;distance&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;distance_meters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+                    <span class="s2">&quot;time_delta&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+                    <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;speed&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                    <span class="s2">&quot;acceleration&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;acceleration&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                    <span class="s2">&quot;estimated_mode&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;estimated_mode&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="n">Point</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">aggregate_trip</span><span class="p">(</span><span class="n">group</span><span class="p">):</span>
+            <span class="n">first_start</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;tracked_at_start&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">last_end</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;tracked_at_end&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="c1"># Check if there are at least two points in the group</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="c1"># Handle the case with only one point</span>
+                <span class="n">lon</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;longitude_start&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">lat</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;latitude_start&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Create a LineString from the trip points</span>
+                <span class="n">trip_line</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">(</span>
+                    <span class="nb">zip</span><span class="p">(</span><span class="n">group</span><span class="p">[</span><span class="s2">&quot;latitude_start&quot;</span><span class="p">],</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;longitude_start&quot;</span><span class="p">])</span>
+                <span class="p">)</span>
+                <span class="n">lon</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;longitude_start&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">lat</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;latitude_start&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Calculate the duration of the trip</span>
+            <span class="n">duration</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">last_end</span><span class="p">)</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">first_start</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="s2">&quot;tracked_at_start&quot;</span><span class="p">:</span> <span class="n">first_start</span><span class="p">,</span>
+                    <span class="s2">&quot;tracked_at_end&quot;</span><span class="p">:</span> <span class="n">last_end</span><span class="p">,</span>
+                    <span class="s2">&quot;duration&quot;</span><span class="p">:</span> <span class="n">duration</span><span class="p">,</span>
+                    <span class="s2">&quot;detection&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="s2">&quot;longitude_start&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span>
+                    <span class="s2">&quot;latitude_start&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
+                    <span class="s2">&quot;longitude_end&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;longitude_end&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="s2">&quot;latitude_end&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;latitude_end&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="s2">&quot;distance&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;distance_meters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+                    <span class="s2">&quot;time_delta&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;time_delta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
+                    <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;speed&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                    <span class="s2">&quot;acceleration&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;acceleration&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                    <span class="s2">&quot;estimated_mode&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">[</span><span class="s2">&quot;estimated_mode&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="n">trip_line</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">Point</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Group by the new key and apply the custom aggregation functions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="n">group_key</span><span class="p">,</span> <span class="s2">&quot;detection&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">aggregate_activity</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;detection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;activity&quot;</span>
+            <span class="k">else</span> <span class="n">aggregate_trip</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Reset the index and drop the grouping key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Drop the &#39;longitude_start&#39; and &#39;latitude_start&#39; columns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span>
+            <span class="p">[</span><span class="s2">&quot;longitude_start&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude_start&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude_end&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude_end&quot;</span><span class="p">],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">detection</span> <span class="o">==</span> <span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Staypoint&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">detection</span> <span class="o">==</span> <span class="s2">&quot;trip&quot;</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Leg&quot;</span>
+
+        <span class="c1"># Add the home and work locations if available in df</span>
+        <span class="k">if</span> <span class="s2">&quot;home_loc&quot;</span> <span class="ow">in</span> <span class="n">df</span> <span class="ow">and</span> <span class="s2">&quot;work_loc&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="p">:</span>
+            <span class="c1"># Both &#39;home_loc&#39; and &#39;work_loc&#39; columns are present</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">,</span>
+                <span class="n">df</span><span class="p">[[</span><span class="s2">&quot;home_loc&quot;</span><span class="p">,</span> <span class="s2">&quot;work_loc&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(),</span>
+                <span class="n">on</span><span class="o">=</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+                <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="s2">&quot;home_loc&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="p">:</span>
+            <span class="c1"># Only &#39;home_loc&#39; is present</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">,</span>
+                <span class="n">df</span><span class="p">[[</span><span class="s2">&quot;home_loc&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(),</span>
+                <span class="n">on</span><span class="o">=</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+                <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="s2">&quot;work_loc&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="p">:</span>
+            <span class="c1"># Only &#39;work_loc&#39; is present</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">,</span>
+                <span class="n">df</span><span class="p">[[</span><span class="s2">&quot;work_loc&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(),</span>
+                <span class="n">on</span><span class="o">=</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+                <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Neither &#39;home_loc&#39; nor &#39;work_loc&#39; are present in df</span>
+            <span class="k">pass</span>  <span class="c1"># You can choose to ignore or perform another action</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marc-Edouard Schultheiss.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

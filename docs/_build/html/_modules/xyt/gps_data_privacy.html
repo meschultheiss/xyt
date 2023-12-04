@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xyt.gps_data_privacy &mdash; xyt 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            xyt
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">xyt</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">xyt.gps_data_privacy</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for xyt.gps_data_privacy</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">haversine</span> <span class="kn">import</span> <span class="n">haversine_vector</span><span class="p">,</span> <span class="n">Unit</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+
+<div class="viewcode-block" id="GPSDataPrivacy">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_privacy.GPSDataPrivacy">[docs]</a>
+<span class="k">class</span> <span class="nc">GPSDataPrivacy</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for obfuscating and aggregating GPS data to enhance privacy.</span>
+
+<span class="sd">    This class provides methods to obfuscate GPS data by adding noise, shifting coordinates,</span>
+<span class="sd">    and aggregating data within defined cell centers. It also calculates utility metrics for</span>
+<span class="sd">    evaluating the impact of obfuscation on the data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">mode</span><span class="o">.</span><span class="n">chained_assignment</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_add_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds random uniform noise to the given point, in a radius = radius - offset.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - point (tuple): Points as a tuple (latitude, longitude) in degrees.</span>
+<span class="sd">            - radius (int, optional): Radius of the point neighborhood. Defaults to 100.</span>
+<span class="sd">            - offset (int, optional): Offset from the perimeter of the neighborhood circle,</span>
+<span class="sd">            where the shifted point can&#39;t be located. Defaults to 30.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - tuple: Shifted point expressed as (latitude, longitude)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">adjusted_radius</span> <span class="o">=</span> <span class="n">radius</span> <span class="o">-</span> <span class="n">offset</span>
+
+        <span class="k">assert</span> <span class="n">adjusted_radius</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Offset must be bigger than radius.&quot;</span>
+
+        <span class="n">latitude_shift_km</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">radius</span><span class="p">,</span> <span class="n">radius</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span>
+        <span class="n">longitude_shift_km</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">radius</span><span class="p">,</span> <span class="n">radius</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span>
+
+        <span class="k">while</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">latitude_shift_km</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">longitude_shift_km</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="o">&gt;</span> <span class="p">(</span><span class="n">radius</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span>
+        <span class="p">):</span>
+            <span class="n">latitude_shift_km</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">radius</span><span class="p">,</span> <span class="n">radius</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span>
+            <span class="n">longitude_shift_km</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">radius</span><span class="p">,</span> <span class="n">radius</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shift_point</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">latitude_shift_km</span><span class="p">,</span> <span class="n">longitude_shift_km</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_shift_point</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">point</span><span class="p">,</span> <span class="n">latitude_shift_km</span><span class="p">,</span> <span class="n">longitude_shift_km</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Shifts the coordinates of a given point.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - point (tuple): Starting point as (latitude, longitude), in degrees.</span>
+<span class="sd">            - latitude_shift_km (float): Latitude offset in kilometers.</span>
+<span class="sd">            - longitude_shift_km (float): Longitude offset in kilometers.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - tuple: Shifted point expressed as (latitude, longitude)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">lat_km</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lat_to_km</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span> <span class="o">+</span> <span class="n">latitude_shift_km</span>
+        <span class="n">lon_km</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lon_to_km</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span> <span class="o">+</span> <span class="n">longitude_shift_km</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_km_to_lat</span><span class="p">(</span><span class="n">lat_km</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_km_to_lon</span><span class="p">(</span><span class="n">lon_km</span><span class="p">,</span> <span class="n">lat</span><span class="p">))</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_lon_to_km</span><span class="p">(</span><span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Expresses given longitude in kilometers to the east.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - latitude (float): Latitude expressed in degrees.</span>
+<span class="sd">            - longitude (float): Longitude expressed in degrees.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - float: Longitude as kilometers to the east.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">km_east</span> <span class="o">=</span> <span class="mf">111.320</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">latitude</span><span class="p">))</span> <span class="o">*</span> <span class="n">longitude</span>
+        <span class="k">return</span> <span class="n">km_east</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_lat_to_km</span><span class="p">(</span><span class="n">latitude</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Expresses given latitude in kilometers to the north.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - latitude (float): Latitude in degrees.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - float: Latitude expressed in kilometers to the north.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">km_north</span> <span class="o">=</span> <span class="mf">110.574</span> <span class="o">*</span> <span class="n">latitude</span>
+        <span class="k">return</span> <span class="n">km_north</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_km_to_lon</span><span class="p">(</span><span class="n">km_east</span><span class="p">,</span> <span class="n">latitude</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Expresses given kilometers to the east in longitude degrees.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - km_east (float): Longitude expressed in km going east from longitude 0,</span>
+<span class="sd">            at the given latitude.</span>
+<span class="sd">            - latitude (float): Latitude in degrees.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - float: Longitude in degrees.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">km_east</span> <span class="o">/</span> <span class="p">(</span><span class="mf">111.320</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">latitude</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">lon</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_km_to_lat</span><span class="p">(</span><span class="n">km_north</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Expresses latitude given in kilometers to the east in degrees.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - km_north (float): Latitude expressed in kilometers to the north.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - float: Latitude in degrees.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">km_north</span> <span class="o">/</span> <span class="mf">110.574</span>
+
+    <span class="k">def</span> <span class="nf">_assign_cell_center</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">,</span> <span class="n">cell_size</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the closest cell center for the given coordinates,</span>
+<span class="sd">        when the map is divided into a lattice with the supplied cell_size.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - latitude (float): Latitude as degrees.</span>
+<span class="sd">            - longitude (float): Longitude as degrees.</span>
+<span class="sd">            - cell_size (float): Cell size in kilometers.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - tuple(float, float): Coordinates of the closest cell center on the map.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">km_east</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lon_to_km</span><span class="p">(</span><span class="n">latitude</span><span class="p">,</span> <span class="n">longitude</span><span class="p">)</span>
+        <span class="n">km_north</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lat_to_km</span><span class="p">(</span><span class="n">latitude</span><span class="p">)</span>
+
+        <span class="n">km_east</span> <span class="o">=</span> <span class="n">km_east</span> <span class="o">-</span> <span class="n">km_east</span> <span class="o">%</span> <span class="n">cell_size</span> <span class="o">+</span> <span class="n">cell_size</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">km_north</span> <span class="o">=</span> <span class="n">km_north</span> <span class="o">-</span> <span class="n">km_north</span> <span class="o">%</span> <span class="n">cell_size</span> <span class="o">+</span> <span class="n">cell_size</span> <span class="o">/</span> <span class="mi">2</span>
+
+        <span class="n">lat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_km_to_lat</span><span class="p">(</span><span class="n">km_north</span><span class="p">)</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_km_to_lon</span><span class="p">(</span><span class="n">km_east</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GPSDataPrivacy.obfuscate">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_privacy.GPSDataPrivacy.obfuscate">[docs]</a>
+    <span class="k">def</span> <span class="nf">obfuscate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">locations</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;remove&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obfuscates the regions of points given in &#39;locations&#39; parameter</span>
+<span class="sd">        by either removing all the points in their proximity or changing the location</span>
+<span class="sd">        of these points to one noisy location in the proximity circle.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - df (pandas.DataFrame): DataFrame with &#39;latitude&#39; and &#39;longitude&#39; columns.</span>
+<span class="sd">            - locations (list): List of locations given as (latitude, longitude) tuples.</span>
+<span class="sd">            - radius (int, optional): Radius of the obfuscation circle. Defaults to 100.</span>
+<span class="sd">            - offset (int, optional): Smallest distance from the perimeter of the obfuscation circle at which the location of interest must be located. Defaults to 30.</span>
+<span class="sd">            - mode (str, optional): Obfuscation mode, can be either &#39;remove&#39; or &#39;assign&#39;. Defaults to &#39;remove&#39;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with obfuscated regions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">radius</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="ow">or</span> <span class="n">radius</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;radius must be a positive integer or float.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">offset</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;offset must be a positive integer.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">locations</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;locations must be a list of (latitude, longitude) tuples.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;remove&quot;</span><span class="p">,</span> <span class="s2">&quot;assign&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;mode must be either &#39;remove&#39; or &#39;assign&#39;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># shift the home location</span>
+        <span class="n">shifted_locations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">output_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">location</span> <span class="ow">in</span> <span class="n">locations</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">location</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">shifted_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_noise</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+                <span class="n">shifted_locations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shifted_location</span><span class="p">)</span>
+
+                <span class="n">output_df</span><span class="p">[</span><span class="s2">&quot;location_dist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">haversine_vector</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">output_df</span><span class="o">.</span><span class="n">latitude</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">output_df</span><span class="o">.</span><span class="n">longitude</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+                    <span class="p">),</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shifted_location</span><span class="p">),</span> <span class="p">(</span><span class="n">output_df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)),</span>
+                    <span class="n">Unit</span><span class="o">.</span><span class="n">METERS</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;remove&quot;</span><span class="p">:</span>
+                    <span class="n">output_df</span> <span class="o">=</span> <span class="n">output_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">output_df</span><span class="p">[</span><span class="s2">&quot;location_dist&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">radius</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;assign&quot;</span><span class="p">:</span>
+                    <span class="n">output_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="n">output_df</span><span class="o">.</span><span class="n">location_dist</span> <span class="o">&lt;=</span> <span class="n">radius</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span>
+                    <span class="p">]</span> <span class="o">=</span> <span class="n">shifted_location</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">output_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                        <span class="n">output_df</span><span class="o">.</span><span class="n">location_dist</span> <span class="o">&lt;=</span> <span class="n">radius</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span>
+                    <span class="p">]</span> <span class="o">=</span> <span class="n">shifted_location</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">shifted_locations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">output_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;location_dist&quot;</span><span class="p">]),</span>
+            <span class="n">shifted_locations</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GPSDataPrivacy.get_obfuscation_utility">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_privacy.GPSDataPrivacy.get_obfuscation_utility">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_obfuscation_utility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w_prepared</span><span class="p">,</span> <span class="n">w_obfuscated</span><span class="p">,</span> <span class="n">legs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the ratio of legs affected by obfuscation to total legs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - w_prepared (pandas.DataFrame): Smoothed and cleaned waypoints DataFrame.</span>
+<span class="sd">            - w_obfuscated (pandas.DataFrame): Smoothed, cleaned, and obfuscated waypoints DataFrame.</span>
+<span class="sd">            - legs (pandas.DataFrame): DataFrame that contains assembled legs.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - [float]: Ratio of legs affected by obfuscation to total legs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Check if required columns are present in the input DataFrames</span>
+        <span class="n">required_columns_w_prepared</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="n">column</span> <span class="ow">in</span> <span class="n">w_prepared</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">required_columns_w_prepared</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;w_prepared DataFrame must have columns: &#39;tracked_at&#39;, &#39;latitude&#39;, &#39;longitude&#39;.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">required_columns_w_obfuscated</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="n">column</span> <span class="ow">in</span> <span class="n">w_obfuscated</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">required_columns_w_obfuscated</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;w_obfuscated DataFrame must have columns: &#39;tracked_at&#39;, &#39;latitude&#39;, &#39;longitude&#39;.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">required_columns_legs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;started_at&quot;</span><span class="p">,</span> <span class="s2">&quot;finished_at&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">column</span> <span class="ow">in</span> <span class="n">legs</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">required_columns_legs</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;legs DataFrame must have columns: &#39;started_at&#39;, &#39;finished_at&#39;.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">w_obfuscated</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">w_prepared</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>  <span class="c1"># assume remove mode</span>
+            <span class="n">timestamps</span> <span class="o">=</span> <span class="n">w_prepared</span><span class="p">[</span>
+                <span class="o">~</span><span class="n">w_prepared</span><span class="o">.</span><span class="n">tracked_at</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">w_obfuscated</span><span class="o">.</span><span class="n">tracked_at</span><span class="p">)</span>
+            <span class="p">]</span><span class="o">.</span><span class="n">tracked_at</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># assume assign mode</span>
+            <span class="n">timestamps</span> <span class="o">=</span> <span class="n">w_prepared</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">w_prepared</span><span class="o">.</span><span class="n">latitude</span> <span class="o">!=</span> <span class="n">w_obfuscated</span><span class="o">.</span><span class="n">latitude</span><span class="p">)</span>
+                <span class="o">|</span> <span class="p">(</span><span class="n">w_prepared</span><span class="o">.</span><span class="n">longitude</span> <span class="o">!=</span> <span class="n">w_obfuscated</span><span class="o">.</span><span class="n">longitude</span><span class="p">)</span>
+            <span class="p">]</span><span class="o">.</span><span class="n">tracked_at</span>
+
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">timestamps</span> <span class="o">=</span> <span class="n">timestamps</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="n">starts</span> <span class="o">=</span> <span class="n">legs</span><span class="o">.</span><span class="n">started_at</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">ends</span> <span class="o">=</span> <span class="n">legs</span><span class="o">.</span><span class="n">finished_at</span><span class="o">.</span><span class="n">values</span>
+
+        <span class="n">legs_size</span> <span class="o">=</span> <span class="n">legs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">legs_size</span><span class="p">):</span>
+            <span class="n">points_affected</span> <span class="o">=</span> <span class="n">timestamps</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">timestamps</span> <span class="o">&gt;=</span> <span class="n">starts</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">timestamps</span> <span class="o">&lt;=</span> <span class="n">ends</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">points_affected</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">count</span> <span class="o">/</span> <span class="n">legs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_dt_floor</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">datetime</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Performs the floor operation on datetime values,</span>
+<span class="sd">        with given timedelta as the base, e.g. 2021-01-01 12:21:47 with timedelta of 15s</span>
+<span class="sd">        returns 2021-01-01 12:21:45.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - dt (datetime.datetime): Datetime value to be floored.</span>
+<span class="sd">            - delta (datetime.timedelta): Timedelta used for the floor operation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - datetime.datetime: Floored datetime.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># dt needs to be python datetime</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span><span class="o">.</span><span class="n">to_pydatetime</span><span class="p">()</span>
+        <span class="n">seconds</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">dt</span> <span class="o">-</span> <span class="n">datetime</span><span class="o">.</span><span class="n">min</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="n">dt</span><span class="o">.</span><span class="n">tzinfo</span><span class="p">))</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">())</span>
+        <span class="n">remainder</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span>
+            <span class="n">seconds</span><span class="o">=</span><span class="n">seconds</span> <span class="o">%</span> <span class="n">delta</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">(),</span>
+            <span class="n">microseconds</span><span class="o">=</span><span class="n">dt</span><span class="o">.</span><span class="n">microsecond</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">dt</span> <span class="o">-</span> <span class="n">remainder</span>
+
+<div class="viewcode-block" id="GPSDataPrivacy.aggregate">
+<a class="viewcode-back" href="../../xyt.html#xyt.gps_data_privacy.GPSDataPrivacy.aggregate">[docs]</a>
+    <span class="k">def</span> <span class="nf">aggregate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">waypoints_df</span><span class="p">,</span> <span class="n">cell_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Aggregates users in timedeltas and cells on the map.</span>
+<span class="sd">        Returns a DataFrame with the count of users in a given timedelta and cell.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - waypoints_df (pandas.DataFrame): DataFrame with &#39;latitude&#39;, &#39;longitude&#39;, &#39;user_id&#39; and &#39;tracked_at&#39; columns.</span>
+<span class="sd">            - cell_size (float): Size of the square cells on the map, in kilometers.</span>
+<span class="sd">            - delta (datetime.timedelta): Frequency for the time aggregation, e.g. 15 minutes.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - pandas.DataFrame: DataFrame with &#39;tracked_at&#39;, &#39;cell_latitude&#39;, &#39;cell_longitude&#39; and &#39;count&#39; columns.</span>
+<span class="sd">                The &#39;cell_latitude&#39; and &#39;cell_longitude&#39; columns give coordinates of the centers of cells on the map.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Check if required columns are present in the input DataFrame</span>
+        <span class="n">required_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">,</span> <span class="s2">&quot;tracked_at&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">column</span> <span class="ow">in</span> <span class="n">waypoints_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">required_columns</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Input DataFrame must have columns: &#39;latitude&#39;, &#39;longitude&#39;, &#39;tracked_at&#39;, &#39;user_id&#39;.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Check if cell_size is a positive float</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cell_size</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span> <span class="ow">or</span> <span class="n">cell_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cell_size must be a positive float or integer.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check if delta is a timedelta</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">delta</span><span class="p">,</span> <span class="n">timedelta</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;delta must be a timedelta.&quot;</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">waypoints_df</span><span class="p">[[</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">,</span> <span class="s2">&quot;tracked_at&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">]]</span>
+
+        <span class="n">cell_centers</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_assign_cell_center</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">cell_size</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">df</span><span class="o">.</span><span class="n">latitude</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">longitude</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+        <span class="p">]</span>
+
+        <span class="n">cell_latitudes</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">cell_centers</span><span class="p">]</span>
+        <span class="n">cell_longitudes</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">cell_centers</span><span class="p">]</span>
+
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;cell_latitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cell_latitudes</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;cell_longitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cell_longitudes</span>
+
+        <span class="n">tracked_at</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">tracked_at</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">tzinfo</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">tracked_at</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tzinfo</span>
+
+        <span class="n">tracked_at</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_dt_floor</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span> <span class="k">for</span> <span class="n">dt</span> <span class="ow">in</span> <span class="n">tracked_at</span><span class="p">]</span>
+
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tracked_at</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">tracked_at</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">tracked_at</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="n">tzinfo</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="s2">&quot;tracked_at&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_longitude&quot;</span><span class="p">]]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">&quot;tracked_at&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;cell_longitude&quot;</span><span class="p">])</span>
+            <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="s2">&quot;count&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="s2">&quot;count&quot;</span><span class="p">})</span>
+        <span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marc-Edouard Schultheiss.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

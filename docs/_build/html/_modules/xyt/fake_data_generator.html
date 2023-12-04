@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xyt.fake_data_generator &mdash; xyt 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            xyt
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">xyt</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">xyt.fake_data_generator</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for xyt.fake_data_generator</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">faker</span> <span class="kn">import</span> <span class="n">Faker</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">Point</span><span class="p">,</span> <span class="n">LineString</span>
+<span class="kn">import</span> <span class="nn">pytz</span>
+<span class="kn">import</span> <span class="nn">geopandas</span> <span class="k">as</span> <span class="nn">gpd</span>
+<span class="kn">import</span> <span class="nn">pyproj</span>
+<span class="kn">from</span> <span class="nn">geopy.geocoders</span> <span class="kn">import</span> <span class="n">Nominatim</span>
+<span class="kn">import</span> <span class="nn">folium</span>
+<span class="kn">from</span> <span class="nn">shapely.wkt</span> <span class="kn">import</span> <span class="n">loads</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">Point</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">timedelta</span>
+<span class="kn">from</span> <span class="nn">geopy.distance</span> <span class="kn">import</span> <span class="n">geodesic</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">import</span> <span class="nn">geopy.distance</span>
+
+
+<div class="viewcode-block" id="FakeDataGenerator">
+<a class="viewcode-back" href="../../xyt.html#xyt.fake_data_generator.FakeDataGenerator">[docs]</a>
+<span class="k">class</span> <span class="nc">FakeDataGenerator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for generating fake location-based data for testing and demonstration purposes.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        - projection_epsg (int): The EPSG code for the desired projection (default is 4326).</span>
+<span class="sd">        - location_name (str): The name of a location for which to generate data. If provided, the generated data will be constrained within the bounding box of this location.</span>
+<span class="sd">        - home_radius_km (int): The radius in kilometers within which home locations for different groups should be generated.</span>
+
+<span class="sd">    Example usage:</span>
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            generator = FakeDataGenerator(location_name=&quot;Switzerland&quot;, num_users=15)</span>
+<span class="sd">            df_legs = generator.generate_legs(num_rows=10)</span>
+<span class="sd">            df_staypoints = generator.generate_staypoints(num_rows=10)</span>
+<span class="sd">            df_waypoints = generator.generate_waypoints(num_rows=10)</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">projection_epsg</span><span class="o">=</span><span class="mi">4326</span><span class="p">,</span> <span class="n">location_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">home_radius_km</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">num_users</span><span class="o">=</span><span class="mi">15</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fake</span> <span class="o">=</span> <span class="n">Faker</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timezone</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="s2">&quot;Europe/Zurich&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">projection_epsg</span> <span class="o">=</span> <span class="n">projection_epsg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">location_name</span> <span class="o">=</span> <span class="n">location_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">projection</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span>
+            <span class="s2">&quot;epsg:4326&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;epsg:</span><span class="si">{</span><span class="n">projection_epsg</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">transform</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">location_bbox</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">home_radius_km</span> <span class="o">=</span> <span class="n">home_radius_km</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_users</span> <span class="o">=</span> <span class="n">num_users</span>
+
+        <span class="k">if</span> <span class="n">location_name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">location_bbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_bounding_box</span><span class="p">(</span><span class="n">location_name</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FakeDataGenerator.get_bounding_box">
+<a class="viewcode-back" href="../../xyt.html#xyt.fake_data_generator.FakeDataGenerator.get_bounding_box">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_bounding_box</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location_name</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Retrieve the bounding box coordinates for a specified location.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - location_name (str): The name of the location for which to retrieve the bounding box.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - list: A list of bounding box coordinates [south, north, west, east].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">geolocator</span> <span class="o">=</span> <span class="n">Nominatim</span><span class="p">(</span><span class="n">user_agent</span><span class="o">=</span><span class="s2">&quot;geo_data_generator&quot;</span><span class="p">)</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">geolocator</span><span class="o">.</span><span class="n">geocode</span><span class="p">(</span><span class="n">location_name</span><span class="p">,</span> <span class="n">exactly_one</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">location</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Location &#39;</span><span class="si">{</span><span class="n">location_name</span><span class="si">}</span><span class="s2">&#39; not found&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">location</span><span class="o">.</span><span class="n">raw</span><span class="p">[</span><span class="s2">&quot;boundingbox&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="FakeDataGenerator.generate_home_location">
+<a class="viewcode-back" href="../../xyt.html#xyt.fake_data_generator.FakeDataGenerator.generate_home_location">[docs]</a>
+    <span class="k">def</span> <span class="nf">generate_home_location</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a random home location point.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - Point: A Shapely Point object representing the home location.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">location_bbox</span><span class="p">:</span>
+            <span class="n">south</span><span class="p">,</span> <span class="n">north</span><span class="p">,</span> <span class="n">west</span><span class="p">,</span> <span class="n">east</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">location_bbox</span><span class="p">)</span>
+            <span class="n">home_lon</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">west</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">east</span><span class="p">))</span>
+            <span class="n">home_lat</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">south</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">north</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">Point</span><span class="p">(</span><span class="n">home_lon</span><span class="p">,</span> <span class="n">home_lat</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">home_lon</span><span class="p">,</span> <span class="n">home_lat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fake</span><span class="o">.</span><span class="n">longitude</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">fake</span><span class="o">.</span><span class="n">latitude</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">Point</span><span class="p">(</span><span class="n">home_lon</span><span class="p">,</span> <span class="n">home_lat</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FakeDataGenerator.generate_random_point_in_location">
+<a class="viewcode-back" href="../../xyt.html#xyt.fake_data_generator.FakeDataGenerator.generate_random_point_in_location">[docs]</a>
+    <span class="k">def</span> <span class="nf">generate_random_point_in_location</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">home_location</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a random point within the specified location.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - home_location (Point, optional): The home location within which to generate the random point.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - Point: A Shapely Point object representing the random point within the location.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">home_location</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">home_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_home_location</span><span class="p">()</span>
+
+        <span class="n">lat_offset</span><span class="p">,</span> <span class="n">lon_offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">home_radius_km</span> <span class="o">/</span> <span class="mi">111</span>
+        <span class="p">)</span>
+
+        <span class="n">random_lat</span> <span class="o">=</span> <span class="n">home_location</span><span class="o">.</span><span class="n">y</span> <span class="o">+</span> <span class="n">lat_offset</span>
+        <span class="n">random_lon</span> <span class="o">=</span> <span class="n">home_location</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">lon_offset</span>
+
+        <span class="k">return</span> <span class="n">Point</span><span class="p">(</span><span class="n">random_lon</span><span class="p">,</span> <span class="n">random_lat</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FakeDataGenerator.generate_intermediate_points">
+<a class="viewcode-back" href="../../xyt.html#xyt.fake_data_generator.FakeDataGenerator.generate_intermediate_points">[docs]</a>
+    <span class="k">def</span> <span class="nf">generate_intermediate_points</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">point_start</span><span class="p">,</span> <span class="n">point_end</span><span class="p">,</span> <span class="n">num_points</span><span class="p">,</span> <span class="n">noise_range</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0001</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">)</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate intermediate points between two given points.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - point_start (Point): The starting point.</span>
+<span class="sd">            - point_end (Point): The ending point.</span>
+<span class="sd">            - num_points (int): The number of intermediate points to generate.</span>
+<span class="sd">            - noise_range (tuple, optional): Range for generating random noise (default is (0.0001, 0.005)).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - list: A list of Shapely Point objects representing intermediate points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x_start</span><span class="p">,</span> <span class="n">y_start</span> <span class="o">=</span> <span class="n">point_start</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">point_start</span><span class="o">.</span><span class="n">y</span>
+        <span class="n">x_end</span><span class="p">,</span> <span class="n">y_end</span> <span class="o">=</span> <span class="n">point_end</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">point_end</span><span class="o">.</span><span class="n">y</span>
+
+        <span class="n">intermediate_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_points</span><span class="p">):</span>
+            <span class="n">fraction</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">num_points</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">lon</span> <span class="o">=</span> <span class="n">x_start</span> <span class="o">+</span> <span class="p">(</span><span class="n">x_end</span> <span class="o">-</span> <span class="n">x_start</span><span class="p">)</span> <span class="o">*</span> <span class="n">fraction</span>
+            <span class="n">lat</span> <span class="o">=</span> <span class="n">y_start</span> <span class="o">+</span> <span class="p">(</span><span class="n">y_end</span> <span class="o">-</span> <span class="n">y_start</span><span class="p">)</span> <span class="o">*</span> <span class="n">fraction</span>
+
+            <span class="c1"># Generate random noise within the specified range</span>
+            <span class="n">noise</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">noise_range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">noise_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">lon</span> <span class="o">+=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">noise</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+            <span class="n">lat</span> <span class="o">+=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">noise</span><span class="p">,</span> <span class="n">noise</span><span class="p">)</span>
+
+            <span class="n">intermediate_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">intermediate_points</span></div>
+
+
+<div class="viewcode-block" id="FakeDataGenerator.generate_dataframe">
+<a class="viewcode-back" href="../../xyt.html#xyt.fake_data_generator.FakeDataGenerator.generate_dataframe">[docs]</a>
+    <span class="k">def</span> <span class="nf">generate_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_rows</span><span class="p">,</span> <span class="n">trace_type</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a GeoDataFrame with synthetic location-based data for multiple groups.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - num_rows (int): The number of data rows to generate for each group.</span>
+<span class="sd">            - trace_type (str): The type of data to generate (&#39;Staypoint&#39; or &#39;Leg&#39;).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - GeoDataFrame: A GeoDataFrame containing the generated location-based data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">home_locations</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">group_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_users</span><span class="p">):</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fake</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span>
+            <span class="n">home_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_home_location</span><span class="p">()</span>
+            <span class="n">home_locations</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">home_location</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_rows</span><span class="p">)</span>
+            <span class="n">start_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fake</span><span class="o">.</span><span class="n">date_time_this_decade</span><span class="p">()</span>
+            <span class="n">finished_at</span> <span class="o">=</span> <span class="n">start_time</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_rows</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">trace_type</span> <span class="o">==</span> <span class="s2">&quot;Staypoint&quot;</span><span class="p">:</span>
+                    <span class="n">start_time</span> <span class="o">=</span> <span class="n">finished_at</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">60</span><span class="p">))</span>
+                    <span class="n">finished_at</span> <span class="o">=</span> <span class="n">start_time</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span>
+                        <span class="n">minutes</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">600</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">trace_type</span> <span class="o">==</span> <span class="s2">&quot;Leg&quot;</span><span class="p">:</span>
+                    <span class="n">start_time</span> <span class="o">=</span> <span class="n">finished_at</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span>
+                        <span class="n">minutes</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">600</span><span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="n">finished_at</span> <span class="o">=</span> <span class="n">start_time</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">60</span><span class="p">))</span>
+                <span class="n">detected_mode</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Mode::</span><span class="si">{</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">([</span><span class="s1">&#39;Car&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Transit&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Walk&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Bicycle&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="n">purpose</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">([</span><span class="s2">&quot;home&quot;</span><span class="p">,</span> <span class="s2">&quot;work&quot;</span><span class="p">,</span> <span class="s2">&quot;leisure&quot;</span><span class="p">,</span> <span class="s2">&quot;other&quot;</span><span class="p">])</span>
+
+                <span class="k">if</span> <span class="n">trace_type</span> <span class="o">==</span> <span class="s2">&quot;Staypoint&quot;</span><span class="p">:</span>
+                    <span class="n">geometry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_random_point_in_location</span><span class="p">(</span><span class="n">home_location</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">trace_type</span> <span class="o">==</span> <span class="s2">&quot;Leg&quot;</span><span class="p">:</span>
+                    <span class="n">point_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_random_point_in_location</span><span class="p">(</span><span class="n">home_location</span><span class="p">)</span>
+                    <span class="n">point_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_random_point_in_location</span><span class="p">(</span><span class="n">home_location</span><span class="p">)</span>
+
+                    <span class="n">num_intermediate_points</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+                    <span class="n">intermediate_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_intermediate_points</span><span class="p">(</span>
+                        <span class="n">point_start</span><span class="p">,</span> <span class="n">point_end</span><span class="p">,</span> <span class="n">num_intermediate_points</span>
+                    <span class="p">)</span>
+
+                    <span class="n">geometry</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">point_start</span><span class="p">,</span> <span class="o">*</span><span class="n">intermediate_points</span><span class="p">,</span> <span class="n">point_end</span><span class="p">]</span>
+                    <span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">point_start</span><span class="o">.</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">180</span> <span class="ow">or</span> <span class="n">point_start</span><span class="o">.</span><span class="n">y</span> <span class="o">&gt;</span> <span class="mi">90</span><span class="p">:</span>
+                        <span class="n">estimated_length</span> <span class="o">=</span> <span class="n">geodesic</span><span class="p">(</span>
+                            <span class="p">(</span><span class="n">point_start</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">point_start</span><span class="o">.</span><span class="n">x</span><span class="p">),</span> <span class="p">(</span><span class="n">point_end</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">point_end</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">m</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">estimated_length</span> <span class="o">=</span> <span class="n">point_start</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">point_end</span><span class="p">)</span>
+
+                <span class="n">row</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span>
+                    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">trace_type</span><span class="p">,</span>
+                    <span class="s2">&quot;started_at&quot;</span><span class="p">:</span> <span class="n">start_time</span><span class="p">,</span>
+                    <span class="s2">&quot;finished_at&quot;</span><span class="p">:</span> <span class="n">finished_at</span><span class="p">,</span>
+                    <span class="s2">&quot;timezone&quot;</span><span class="p">:</span> <span class="s2">&quot;Europe/Zurich&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;length_meters&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s2">&quot;detected_mode&quot;</span><span class="p">:</span> <span class="n">detected_mode</span> <span class="k">if</span> <span class="n">trace_type</span> <span class="o">==</span> <span class="s2">&quot;Leg&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s2">&quot;validated&quot;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">getrandbits</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span>
+                    <span class="s2">&quot;purpose&quot;</span><span class="p">:</span> <span class="n">purpose</span><span class="p">,</span>
+                    <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="n">geometry</span><span class="p">,</span>
+                    <span class="s2">&quot;started_on&quot;</span><span class="p">:</span> <span class="n">start_time</span><span class="o">.</span><span class="n">date</span><span class="p">(),</span>
+                <span class="p">}</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;home_location&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">home_locations</span>
+        <span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">projection_epsg</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">geometry</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">trace_type</span> <span class="o">==</span> <span class="s2">&quot;Leg&quot;</span><span class="p">:</span>
+            <span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;length_meters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="s2">&quot;EPSG:2056&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">length</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">gdf</span><span class="p">[</span><span class="s2">&quot;length_meters&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">gdf</span></div>
+
+
+<div class="viewcode-block" id="FakeDataGenerator.generate_legs">
+<a class="viewcode-back" href="../../xyt.html#xyt.fake_data_generator.FakeDataGenerator.generate_legs">[docs]</a>
+    <span class="k">def</span> <span class="nf">generate_legs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_rows</span><span class="o">=</span><span class="mi">15</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate synthetic location-based data representing movement between locations (legs) for multiple users.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - num_rows (int, optional): The number of data rows to generate for each user (default is 15).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - GeoDataFrame: A GeoDataFrame containing the generated legs data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_dataframe</span><span class="p">(</span><span class="n">num_rows</span><span class="p">,</span> <span class="n">trace_type</span><span class="o">=</span><span class="s2">&quot;Leg&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FakeDataGenerator.generate_staypoints">
+<a class="viewcode-back" href="../../xyt.html#xyt.fake_data_generator.FakeDataGenerator.generate_staypoints">[docs]</a>
+    <span class="k">def</span> <span class="nf">generate_staypoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_rows</span><span class="o">=</span><span class="mi">15</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate synthetic location-based data representing user staypoints at various locations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - num_rows (int, optional): The number of data rows to generate for each user (default is 15).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - GeoDataFrame: A GeoDataFrame containing the generated staypoints data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_dataframe</span><span class="p">(</span><span class="n">num_rows</span><span class="p">,</span> <span class="n">trace_type</span><span class="o">=</span><span class="s2">&quot;Staypoint&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FakeDataGenerator.generate_waypoints">
+<a class="viewcode-back" href="../../xyt.html#xyt.fake_data_generator.FakeDataGenerator.generate_waypoints">[docs]</a>
+    <span class="k">def</span> <span class="nf">generate_waypoints</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">num_rows</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">num_extra_od_points</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_displacement_meters</span><span class="o">=</span><span class="mi">20</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate synthetic location-based data representing waypoints with timestamps and accuracy for multiple users.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            - num_rows (int, optional): The number of data rows to generate for each user (default is 15).</span>
+<span class="sd">            - num_extra_od_points (int, optional): The number of extra points to add at the beginning and end of each linestring (default is 2).</span>
+<span class="sd">            - max_displacement_meters (float, optional): The maximum displacement in meters for the extra points (default is 10 meters).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            - GeoDataFrame: A GeoDataFrame containing the generated waypoints data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df_tracks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_dataframe</span><span class="p">(</span><span class="n">num_rows</span><span class="p">,</span> <span class="n">trace_type</span><span class="o">=</span><span class="s2">&quot;Leg&quot;</span><span class="p">)</span>
+        <span class="n">waypoint_data</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df_tracks</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="n">line_string</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span>
+            <span class="n">start_time</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;started_at&quot;</span><span class="p">]</span>
+            <span class="n">end_time</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;finished_at&quot;</span><span class="p">]</span>
+            <span class="n">point_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">line_string</span><span class="o">.</span><span class="n">coords</span><span class="p">))</span>
+            <span class="n">time_differences</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">point_count</span><span class="p">)</span>
+            <span class="n">accuracies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">point_count</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_extra_od_points</span><span class="p">):</span>
+                <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="o">=</span> <span class="n">line_string</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">original_point</span> <span class="o">=</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
+                <span class="n">displacement</span> <span class="o">=</span> <span class="n">geopy</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span>
+                    <span class="n">meters</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_displacement_meters</span><span class="p">)</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">destination</span><span class="p">(</span><span class="n">original_point</span><span class="p">,</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">360</span><span class="p">))</span>
+                <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="o">=</span> <span class="n">displacement</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">displacement</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">timestamp</span> <span class="o">=</span> <span class="n">start_time</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="p">(</span><span class="n">num_extra_od_points</span> <span class="o">-</span> <span class="n">i</span><span class="p">))</span>
+                <span class="n">accuracy</span> <span class="o">=</span> <span class="n">accuracies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">accuracies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.50</span><span class="p">))</span>
+                <span class="n">waypoint_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">],</span> <span class="s2">&quot;Waypoint&quot;</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">]</span>
+                <span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">point</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">line_string</span><span class="o">.</span><span class="n">coords</span><span class="p">):</span>
+                <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="o">=</span> <span class="n">point</span>
+                <span class="n">timestamp</span> <span class="o">=</span> <span class="n">end_time</span> <span class="o">+</span> <span class="n">time_differences</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span>
+                <span class="n">accuracy</span> <span class="o">=</span> <span class="n">accuracies</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">waypoint_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">],</span> <span class="s2">&quot;Waypoint&quot;</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">]</span>
+                <span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_extra_od_points</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="o">=</span> <span class="n">line_string</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">original_point</span> <span class="o">=</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
+                <span class="n">displacement</span> <span class="o">=</span> <span class="n">geopy</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span>
+                    <span class="n">meters</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_displacement_meters</span><span class="p">)</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">destination</span><span class="p">(</span><span class="n">original_point</span><span class="p">,</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">360</span><span class="p">))</span>
+                <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="o">=</span> <span class="n">displacement</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">displacement</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">timestamp</span> <span class="o">=</span> <span class="n">end_time</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">i</span><span class="p">)</span>
+                <span class="n">accuracy</span> <span class="o">=</span> <span class="n">accuracies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">accuracies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.50</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">waypoint_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">],</span> <span class="s2">&quot;Waypoint&quot;</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">]</span>
+                <span class="p">)</span>
+
+        <span class="n">waypoint_columns</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;tracked_at&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;accuracy&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">df_waypoints</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">waypoint_data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">waypoint_columns</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">df_waypoints</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marc-Edouard Schultheiss.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

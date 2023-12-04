@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xyt.xyt_plot &mdash; xyt 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            xyt
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">xyt</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">xyt.xyt_plot</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for xyt.xyt_plot</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">folium</span>
+<span class="kn">from</span> <span class="nn">folium</span> <span class="kn">import</span> <span class="n">plugins</span>
+<span class="kn">import</span> <span class="nn">geopandas</span> <span class="k">as</span> <span class="nn">gpd</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">Point</span><span class="p">,</span> <span class="n">LineString</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+
+<div class="viewcode-block" id="plot_gps_on_map">
+<a class="viewcode-back" href="../../xyt.html#xyt.xyt_plot.plot_gps_on_map">[docs]</a>
+<span class="k">def</span> <span class="nf">plot_gps_on_map</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">,</span> <span class="n">trace_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">home_col</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">work_col</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">geo_columns</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot location-based data on a Folium map with different colors for each group.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        - df (pd.DataFrame): A Pandas DataFrame containing the location-based data to be plotted.</span>
+<span class="sd">        - trace_type (str, optional): The type of data to be plotted (&#39;Stay&#39;, &#39;Track&#39;, or &#39;Waypoint&#39;). If provided, only data of the specified trace type will be plotted.</span>
+<span class="sd">        - home_col (str, optional): Name of the column containing the home coordinates. Default is None.</span>
+<span class="sd">        - work_col (str, optional): Name of the column containing the work coordinates. Default is None.</span>
+<span class="sd">        - geo_columns (str or list, optional): Name of the column(s) containing the latitude and longitude coordinates. Can be a string (e.g., &#39;geometry&#39;) or a list (e.g., [&#39;latitude&#39;, &#39;longitude&#39;]). Default is None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        - Interactive Folium map.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">geo_columns</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geo_columns</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">geom_column</span> <span class="o">=</span> <span class="n">geo_columns</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geo_columns</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">geo_columns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">df</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="n">Point</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">geo_columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">row</span><span class="p">[</span><span class="n">geo_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+            <span class="p">)</span>
+            <span class="n">geom_column</span> <span class="o">=</span> <span class="s2">&quot;geometry&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Invalid geo_columns parameter. It must be a string or a list of two strings.&quot;</span>
+            <span class="p">)</span>
+    <span class="k">elif</span> <span class="s2">&quot;geometry&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="p">:</span>
+        <span class="n">geom_column</span> <span class="o">=</span> <span class="s2">&quot;geometry&quot;</span>
+    <span class="k">elif</span> <span class="s2">&quot;longitude&quot;</span> <span class="ow">in</span> <span class="n">df</span> <span class="ow">and</span> <span class="s2">&quot;latitude&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="p">:</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="n">Point</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+        <span class="p">)</span>
+        <span class="n">geom_column</span> <span class="o">=</span> <span class="s2">&quot;geometry&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;DataFrame must have &#39;geometry&#39; column or &#39;longitude&#39; and &#39;latitude&#39; columns.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Point</span><span class="p">):</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">Map</span><span class="p">(</span>
+            <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">],</span>
+            <span class="n">zoom_start</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">LineString</span><span class="p">):</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">Map</span><span class="p">(</span>
+            <span class="n">location</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">df</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">df</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+            <span class="p">],</span>
+            <span class="n">zoom_start</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">user_colors</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># To store colors for each user ID</span>
+    <span class="n">plotted_home</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># To track which users&#39; home locations have been plotted</span>
+    <span class="n">plotted_work</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># To track which users&#39; work locations have been plotted</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">trace_type</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">trace_type</span><span class="p">:</span>
+            <span class="k">continue</span>  <span class="c1"># Skip rows that don&#39;t match the specified trace type</span>
+
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">user_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">user_colors</span><span class="p">:</span>
+            <span class="n">user_colors</span><span class="p">[</span><span class="n">user_id</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;#</span><span class="si">{:02x}{:02x}{:02x}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">),</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">),</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">color</span> <span class="o">=</span> <span class="n">user_colors</span><span class="p">[</span><span class="n">user_id</span><span class="p">]</span>
+        <span class="n">popup_text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Type: </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&lt;br&gt;ID: </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;user_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Staypoint&quot;</span><span class="p">:</span>
+            <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">row</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                <span class="n">row</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+            <span class="p">)</span>  <span class="c1"># Swap latitude and longitude</span>
+            <span class="n">folium</span><span class="o">.</span><span class="n">CircleMarker</span><span class="p">(</span>
+                <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">],</span>
+                <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+                <span class="n">radius</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">fill_color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span>
+                <span class="n">popup</span><span class="o">=</span><span class="n">popup_text</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Waypoint&quot;</span> <span class="ow">or</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Leg&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">geom_column</span><span class="p">],</span> <span class="n">Point</span><span class="p">):</span>
+                <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">row</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                    <span class="n">row</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                <span class="p">)</span>  <span class="c1"># Swap latitude and longitude</span>
+                <span class="n">folium</span><span class="o">.</span><span class="n">CircleMarker</span><span class="p">(</span>
+                    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">],</span>
+                    <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                    <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                    <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">fill_color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                    <span class="n">popup</span><span class="o">=</span><span class="n">popup_text</span><span class="p">,</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">geom_column</span><span class="p">],</span> <span class="n">LineString</span><span class="p">):</span>
+                <span class="n">linestring</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">row</span><span class="p">[</span><span class="n">geom_column</span><span class="p">]</span><span class="o">.</span><span class="n">coords</span>
+                <span class="p">]</span>  <span class="c1"># Swap latitude and longitude</span>
+                <span class="n">folium</span><span class="o">.</span><span class="n">PolyLine</span><span class="p">(</span>
+                    <span class="n">locations</span><span class="o">=</span><span class="n">linestring</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">popup</span><span class="o">=</span><span class="n">popup_text</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">home_col</span> <span class="ow">and</span> <span class="n">user_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">plotted_home</span> <span class="ow">and</span> <span class="n">home_col</span> <span class="ow">in</span> <span class="n">df</span><span class="p">:</span>
+            <span class="n">home_location</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">][</span><span class="n">home_col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">folium</span><span class="o">.</span><span class="n">Marker</span><span class="p">(</span>
+                <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">home_location</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">home_location</span><span class="o">.</span><span class="n">x</span><span class="p">],</span>
+                <span class="n">icon</span><span class="o">=</span><span class="n">folium</span><span class="o">.</span><span class="n">Icon</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;home&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;fa&quot;</span><span class="p">),</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">plotted_home</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">work_col</span> <span class="ow">and</span> <span class="n">user_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">plotted_work</span> <span class="ow">and</span> <span class="n">work_col</span> <span class="ow">in</span> <span class="n">df</span><span class="p">:</span>
+            <span class="n">work_location</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">user_id</span><span class="p">][</span><span class="n">work_col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">folium</span><span class="o">.</span><span class="n">Marker</span><span class="p">(</span>
+                <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">work_location</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">work_location</span><span class="o">.</span><span class="n">x</span><span class="p">],</span>
+                <span class="n">icon</span><span class="o">=</span><span class="n">folium</span><span class="o">.</span><span class="n">Icon</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;briefcase&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;fa&quot;</span><span class="p">),</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">plotted_work</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
+
+    <span class="n">folium</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">Fullscreen</span><span class="p">()</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">m</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Marc-Edouard Schultheiss.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
