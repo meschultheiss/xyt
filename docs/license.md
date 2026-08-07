@@ -35,7 +35,7 @@ Citation recommandée :
 ```text
 Bureau Action Située. xyt_gps, package Python pour transformer des exports GPS
 en données de mobilité structurées et analysables. Développement :
-Marc-Edouard Tessier. Version 0.2.0.
+Marc-Edouard Schultheiss. Version 1.0.0.
 ```
 
 ## Soutiens financiers

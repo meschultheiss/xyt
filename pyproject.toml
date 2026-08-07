@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xyt-gps"
-version = "0.2.0"
+version = "1.0.0"
 description = "Pipeline GPS vers donnees de mobilite structurees et indicateurs."
 readme = "README.md"
 # Supported range validated with the current geospatial dependency stack.
