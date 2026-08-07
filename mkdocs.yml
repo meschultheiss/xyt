@@ -1,0 +1,99 @@
+site_name: xyt_gps
+site_description: Documentation du package xyt_gps produit par Bureau Action Située pour transformer des donnees GPS en donnees de mobilite structurees.
+
+theme:
+  name: material
+  language: fr
+  logo: assets/logo-action-situee.svg
+  favicon: assets/logo-action-situee.svg
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+
+extra_css:
+  - assets/stylesheets/action-situee.css
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_symbol_type_heading: true
+            members_order: source
+  - mkdocs-jupyter:
+      include_source: true
+      execute: false
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+
+nav:
+  - Accueil: index.md
+  - Utiliser le package:
+      - Installation: getting-started/installation.md
+      - Structure de projet: getting-started/project-structure.md
+      - Configuration projet: concepts/project-config.md
+      - Données de démonstration: getting-started/sample-data.md
+      - Premier import: getting-started/first-import.md
+      - API recommandée: reference/recommended-api.md
+      - Référence API complète: reference/api.md
+  - Préparer les données:
+      - Format brut MotionTag: raw_import_schema.md
+      - Mappings modes et motifs: concepts/mappings.md
+      - Seuils et hypothèses: processing_assumptions_thresholds.md
+      - États de transformation: concepts/transformation-states.md
+      - Préparation des données: concepts/preparation-scope.md
+      - Qualité et spatial: concepts/quality-spatial.md
+      - Exports spatiaux dashboard: concepts/spatial-analytics.md
+  - Tutoriels:
+      - Notebook demo: tutorials/demo-notebook.md
+      - Adapter à ses données: tutorials/adapter-a-ses-donnees.md
+      - Import multi-projets: tutorials/multi-project-import.md
+      - Qualité et spatial: tutorials/quality-spatial-notebooks.md
+      - Notebooks de production: examples_inventory.md
+  - Indicateurs et exports:
+      - Workflow projet: project_workflow.md
+      - Périmètre du package: concepts/package-scope.md
+      - Dictionnaire des variables: variable_dictionary.md
+      - Dépendances: dependencies.md
+      - Licence et citation: license.md
+  - Maintenance projet:
+      - Déploiement Cloudflare: deployment-cloudflare.md
+      - Migration notebooks historiques: notebook_migration_matrix.md
+      - Design xyt: design/design-xyt.md
+      - Données synthétiques - notes: getting-started/synthetic-data.md
+      - Données de démonstration - notes: synthetic_generation_worklog.md
+      - Inventaire des fonctions: function_inventory.md
+      - Contexte Déclic préfiguration: source_context_declic_prefiguration.md
+      - Plan d'architecture: architecture_plan.md

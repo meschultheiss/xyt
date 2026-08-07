@@ -1,0 +1,3 @@
+# Environnement de documentation MkDocs.
+# Les bornes de versions sont definies dans pyproject.toml.
+-e .[docs]

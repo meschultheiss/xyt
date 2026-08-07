@@ -1,44 +1,79 @@
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[tool.poetry]
-name = "xyt"
-version = "0.1.1"
-authors = ["Marc-Edouard Schultheiss <meschultheiss@gmail.com>"]
-maintainers = ["Marc-Edouard Schultheiss <meschultheiss@gmail.com>"]
-description = "xyt is a python package for processing raw gps data into mobility data. xyt offers privacy-based capabilities and aims to provide a plug-and-play pipeline to leverage gps data."
+[project]
+name = "xyt-gps"
+version = "0.2.0"
+description = "Pipeline GPS vers donnees de mobilite structurees et indicateurs."
 readme = "README.md"
-license = "MIT"  # Fix: Change from table to string
-keywords = ["xyt", "gps", "mobility"]
+# Supported range validated with the current geospatial dependency stack.
+# Relax to Python 3.13+ only after tests and package-ready notebooks pass there.
+requires-python = ">=3.10,<3.13"
+license = "PolyForm-Noncommercial-1.0.0"
+license-files = [
+  "LICENSE",
+  "LICENSE.docs",
+  "LICENSE.sample-data.md",
+  "NOTICE.md",
+]
+authors = [
+  { name = "Bureau Action Située" }
+]
 classifiers = [
-    'Programming Language :: Python :: 3',
-    'License :: OSI Approved :: MIT License',
-    'Operating System :: OS Independent',
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+  "pandas>=2.2,<3.0",
+  "geopandas>=0.14,<2.0",
+  "shapely>=2.0,<3.0",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.6"
-numpy = "*"
-pandas = "*"
-folium = "*"
-streamlit-folium = "*"
-faker = "*"
-shapely = "*"
-geopandas = "*"
-geopy = "*"
-numba = "*"
-more-itertools = "*"
-scikit-fuzzy = "*"
-haversine = "*"
-scikit-learn = "*"
-ipython = "*"
-pathos = "*"
-osmnx = "*"
-gif = "*"
-utm = "*"
-plotly = "*"
-seaborn = "*"
-pointpats = "*"
-pysal = "*"
-contextily = "*"
+[project.optional-dependencies]
+export = [
+  "openpyxl>=3.1,<4.0",
+  "pyarrow>=14,<22",
+]
+analytics = [
+  "duckdb>=1.1,<2.0",
+  "h3>=4.1,<5.0",
+]
+privacy = [
+  "scikit-learn>=1.4,<2.0",
+]
+viz = [
+  "folium>=0.16,<1.0",
+]
+notebook = [
+  "ipykernel>=6.29,<7.0",
+]
+docs = [
+  "mkdocs-material>=9.5,<10.0",
+  "mkdocstrings[python]>=0.25,<1.0",
+  "mkdocs-jupyter>=0.25,<1.0",
+]
+dev = [
+  "nbformat>=5.10,<6.0",
+  "pytest>=8.2,<9.0",
+  "scikit-learn>=1.4,<2.0",
+  "build>=1.2,<2.0",
+  "twine>=5.1,<7.0",
+]
+
+[project.urls]
+Homepage = "https://xyt.situee.ch"
+Documentation = "https://xyt.situee.ch"
+Repository = "https://github.com/action-situee/xyt-gps"
+Issues = "https://github.com/action-situee/xyt-gps/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

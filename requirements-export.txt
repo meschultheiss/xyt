@@ -1,0 +1,3 @@
+# Dependances optionnelles pour les exports Parquet et Excel.
+# Les bornes de versions sont definies dans pyproject.toml.
+-e .[export]

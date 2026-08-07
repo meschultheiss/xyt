@@ -1,0 +1,3 @@
+# Dependances optionnelles pour H3 et les bases DuckDB locales.
+# Les bornes de versions sont definies dans pyproject.toml.
+-e .[analytics]

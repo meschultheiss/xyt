@@ -1,0 +1,3 @@
+# Dependances optionnelles pour les cartes interactives Folium.
+# Les bornes de versions sont definies dans pyproject.toml.
+-e .[viz]
